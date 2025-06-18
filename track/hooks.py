@@ -1,7 +1,7 @@
 app_name = "track"
 app_title = "Track"
 app_publisher = "wanguimbutu"
-app_description = "Stock and Item Tracking through custom Qr codes."
+app_description = "Stock and item tacking through custom Qr codes"
 app_email = "wanguimbutu@gmail.com"
 app_license = "mit"
 

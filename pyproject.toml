@@ -3,7 +3,7 @@ name = "track"
 authors = [
     { name = "wanguimbutu", email = "wanguimbutu@gmail.com"}
 ]
-description = "Stock and Item Tracking through custom Qr codes."
+description = "Stock and item tacking through custom Qr codes"
 requires-python = ">=3.10"
 readme = "README.md"
 dynamic = ["version"]

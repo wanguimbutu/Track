@@ -1,6 +1,6 @@
 ## Track
 
-Stock and Item Tracking through custom Qr codes.
+Stock and item tacking through custom Qr codes
 
 #### License
 
