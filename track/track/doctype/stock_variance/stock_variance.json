@@ -1,0 +1,76 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-23 16:33:07.252695",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "date_dvwk",
+  "column_break_ogbd",
+  "stock_take",
+  "section_break_yggf",
+  "stock_variance_details",
+  "section_break_mtml",
+  "qr_code_variance_details"
+ ],
+ "fields": [
+  {
+   "fieldname": "date_dvwk",
+   "fieldtype": "Date"
+  },
+  {
+   "fieldname": "column_break_ogbd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_take",
+   "fieldtype": "Link",
+   "label": "Stock Take",
+   "options": "Stock Take"
+  },
+  {
+   "fieldname": "section_break_yggf",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "stock_variance_details",
+   "fieldtype": "Table",
+   "label": "Stock Variance Details",
+   "options": "Stock Variance Details"
+  },
+  {
+   "fieldname": "section_break_mtml",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "qr_code_variance_details",
+   "fieldtype": "Table",
+   "label": "Qr code Variance Details",
+   "options": "Variant Qr Code"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-23 16:41:02.502045",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Stock Variance",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
