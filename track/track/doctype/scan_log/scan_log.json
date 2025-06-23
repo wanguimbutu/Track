@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-18 16:41:02.133150",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "qr_code",
+  "status",
+  "column_break_frop",
+  "date",
+  "section_break_cmow",
+  "item_code",
+  "item_name",
+  "column_break_yazd",
+  "serial_number",
+  "batch_no",
+  "section_break_cleq",
+  "manufacture_reference",
+  "return_reference",
+  "column_break_wviw",
+  "manufacture_date",
+  "return_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Link",
+   "label": "Qr code",
+   "options": "Qr Codes"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Manufactured\nReceived In Stores\nDelivered\nReturned\nReconciled"
+  },
+  {
+   "fieldname": "column_break_frop",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Datetime",
+   "label": "Date"
+  },
+  {
+   "fieldname": "section_break_cmow",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "column_break_yazd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serial_number",
+   "fieldtype": "Link",
+   "label": "Serial Number",
+   "options": "Serial No"
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "label": "Batch No",
+   "options": "Batch"
+  },
+  {
+   "fieldname": "section_break_cleq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "manufacture_reference",
+   "fieldtype": "Link",
+   "label": "Manufacture Reference",
+   "options": "Stock Entry"
+  },
+  {
+   "fieldname": "return_reference",
+   "fieldtype": "Link",
+   "label": "Return Reference",
+   "options": "Delivery Note"
+  },
+  {
+   "fieldname": "column_break_wviw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "manufacture_date",
+   "fieldtype": "Datetime",
+   "label": "Manufacture Date"
+  },
+  {
+   "fieldname": "return_date",
+   "fieldtype": "Datetime",
+   "label": "Return Date"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-06-23 15:23:46.418785",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Scan Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
