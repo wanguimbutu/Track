@@ -5,19 +5,16 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "date_dvwk",
+  "date",
   "column_break_ogbd",
   "stock_take",
   "section_break_yggf",
   "stock_variance_details",
   "section_break_mtml",
-  "qr_code_variance_details"
+  "qr_code_variance_details",
+  "amended_from"
  ],
  "fields": [
-  {
-   "fieldname": "date_dvwk",
-   "fieldtype": "Date"
-  },
   {
    "fieldname": "column_break_ogbd",
    "fieldtype": "Column Break"
@@ -47,11 +44,27 @@
    "fieldtype": "Table",
    "label": "Qr code Variance Details",
    "options": "Variant Qr Code"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Stock Variance",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2025-06-23 16:41:02.502045",
+ "modified": "2025-06-24 11:37:15.916764",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Variance",
@@ -72,5 +85,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

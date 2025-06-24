@@ -10,7 +10,8 @@
   "item_name",
   "stock_take_qty",
   "system_qty",
-  "variance"
+  "variance",
+  "warehouse"
  ],
  "fields": [
   {
@@ -44,12 +45,18 @@
    "fieldtype": "Read Only",
    "in_list_view": 1,
    "label": "Item Name"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Warehouse",
+   "options": "Warehouse"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-23 16:36:47.359553",
+ "modified": "2025-06-24 12:05:40.713518",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Variance Details",
