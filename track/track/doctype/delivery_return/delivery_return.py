@@ -3,6 +3,8 @@
  
 import frappe
 from frappe.model.document import Document
+from erpnext.stock.doctype.delivery_note.delivery_note import get_return_doc
+
 
 
 class DeliveryReturn(Document):
@@ -63,16 +65,15 @@ def validate_returned_qr_codes(doc, method):
     if invalid_qrs:
         frappe.throw(f"The following QR codes are not marked as 'Dispatched':<br><b>{', '.join(invalid_qrs)}</b>")
 
+
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
     """
-    For each unique delivery_note in Delivery Return:
-    - Create new Delivery Note (is_return=1, return_against=<original>)
-    - Add rows in custom_returned_qr_codes with:
-        - qr_code
-        - qr_return_reference = delivery return name
+    Create Delivery Note Returns using ERPNext's built-in get_return_doc method.
+    Adds custom_returned_qr_codes for each QR code in Delivery Return.
     """
     delivery_return = frappe.get_doc("Delivery Return", docname)
+    created_notes = []
 
     deliveries = {}
     for row in delivery_return.returned_items:
@@ -80,19 +81,18 @@ def create_delivery_note_returns(docname):
             deliveries[row.delivery_note] = []
         deliveries[row.delivery_note].append(row)
 
-    for dn, rows in deliveries.items():
-        dn_return = frappe.new_doc("Delivery Note")
-        dn_return.is_return = 1
-        dn_return.return_against = dn
-        dn_return.custom_returned_qr_codes = []
+    for dn_name, rows in deliveries.items():
+        return_doc = get_return_doc("Delivery Note", dn_name)
 
+        # Add custom_returned_qr_codes
         for row in rows:
-            dn_return.append("custom_returned_qr_codes", {
+            return_doc.append("custom_returned_qr_codes", {
                 "qr_code": row.qr_code,
                 "qr_return_reference": delivery_return.name
             })
 
-        dn_return.insert(ignore_permissions=True)
+        return_doc.insert(ignore_permissions=True)
+        created_notes.append(return_doc.name)
 
-    return "success"
-
+    frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
+    return created_notes
