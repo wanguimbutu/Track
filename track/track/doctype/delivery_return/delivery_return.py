@@ -3,8 +3,7 @@
  
 import frappe
 from frappe.model.document import Document
-from erpnext.stock.doctype.delivery_note.delivery_note import get_return_doc
-
+from erpnext.stock.doctype.utils import make_return_doc
 
 
 class DeliveryReturn(Document):
@@ -82,7 +81,7 @@ def create_delivery_note_returns(docname):
         deliveries[row.delivery_note].append(row)
 
     for dn_name, rows in deliveries.items():
-        return_doc = get_return_doc("Delivery Note", dn_name)
+        return_doc = make_return_doc("Delivery Note", dn_name)
 
         # Add custom_returned_qr_codes
         for row in rows:

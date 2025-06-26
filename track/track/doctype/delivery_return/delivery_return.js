@@ -1,6 +1,7 @@
 // Copyright (c) 2025, wanguimbutu and contributors
 // For license information, please see license.txt
 
+
 frappe.ui.form.on('Delivery Return', {
     refresh(frm) {
         // Only show the button if the document is submitted
