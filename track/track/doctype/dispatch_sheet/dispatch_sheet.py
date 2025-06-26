@@ -13,7 +13,7 @@ class DispatchSheet(Document):
 def fetch_qr_details_for_dispatch(docname):
     """
     Fetch item_code, batch_no, item_name, and status from Scan Log
-    for each QR code row in Dispatch Sheet, with detailed messages.
+    for each QR code row in Dispatch Sheet (based on qr_code field, not name).
     """
     doc = frappe.get_doc("Dispatch Sheet", docname)
 
@@ -29,8 +29,10 @@ def fetch_qr_details_for_dispatch(docname):
         if not row.qr_code:
             continue
 
-        # Get values from Scan Log
-        log = frappe.db.get_value("Scan Log", row.qr_code, ["item_code", "batch_no", "status"], as_dict=True)
+        frappe.msgprint(f" Looking for QR Code: <b>{row.qr_code}</b>")
+
+        # ✅ Now correctly filtering by the qr_code field
+        log = frappe.db.get_value("Scan Log", {"qr_code": row.qr_code}, ["item_code", "batch_no", "status"], as_dict=True)
 
         if log:
             row.item_code = log.item_code
@@ -56,10 +58,11 @@ def fetch_qr_details_for_dispatch(docname):
         frappe.msgprint(f"Fetched details for {updated} QR code(s):<br><br>" + "".join(updated_details))
 
     if missing_qrs:
-        frappe.msgprint(f" Could not find the following QR code(s) in Scan Log:<br><b>{', '.join(missing_qrs)}</b>")
+        frappe.msgprint(f"Could not find the following QR code(s) in Scan Log:<br><b>{', '.join(missing_qrs)}</b>")
 
     if updated == 0 and not missing_qrs:
         frappe.msgprint("No changes were made.")
+
 
 
 def on_submit(doc, method):
