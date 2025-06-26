@@ -1,0 +1,54 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-26 12:00:54.829984",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "qr_code",
+  "item_code",
+  "item_name",
+  "dispatch_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Qr Code"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
+   "in_list_view": 1,
+   "label": "Item Name"
+  },
+  {
+   "fieldname": "dispatch_reference",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Dispatch Reference",
+   "options": "Dispatch Sheet"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-26 12:04:39.519811",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Returned Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
