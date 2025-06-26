@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-06-26 12:20:44.442140",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "qr_code",
+  "qr_return_reference"
+ ],
+ "fields": [
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Qr Code"
+  },
+  {
+   "fieldname": "qr_return_reference",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "QR Return Reference",
+   "options": "Delivery Return"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-26 12:22:27.333971",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Delivery Note Qr Code",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

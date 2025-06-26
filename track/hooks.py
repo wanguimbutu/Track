@@ -140,7 +140,10 @@ app_license = "mit"
 doc_events = {
 	"Dispatch Sheet": {
 		"on_submit": "track.track.doctype.dispatch_sheet.dispatch_sheet.on_submit",
-	}
+	},
+    "Delivery Return": {
+        "before_save": "track.track.doctype.delivery_return.delivery_return.validate_returned_qr_codes"
+    }
  }
 
 # Scheduled Tasks
