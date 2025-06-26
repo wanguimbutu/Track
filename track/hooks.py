@@ -142,7 +142,8 @@ doc_events = {
 		"on_submit": "track.track.doctype.dispatch_sheet.dispatch_sheet.on_submit",
 	},
     "Delivery Return": {
-        "before_save": "track.track.doctype.delivery_return.delivery_return.validate_returned_qr_codes"
+        "before_save": "track.track.doctype.delivery_return.delivery_return.validate_returned_qr_codes",
+        "on_submit": "track.track.doctype.delivery_return.delivery_return.on_submit_delivery_return"
     }
  }
 
