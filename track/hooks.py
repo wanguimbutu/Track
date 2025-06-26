@@ -137,13 +137,11 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Dispatch Sheet": {
+		"on_submit": "track.track.doctype.dispatch_sheet.dispatch_sheet.on_submit",
+	}
+ }
 
 # Scheduled Tasks
 # ---------------

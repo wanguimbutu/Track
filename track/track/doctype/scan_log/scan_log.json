@@ -33,7 +33,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Manufactured\nReceived In Stores\nDelivered\nReturned\nReconciled"
+   "options": "Manufactured\nReceived In Stores\nDispatched\nReturned\nReconciled"
   },
   {
    "fieldname": "column_break_frop",
@@ -108,7 +108,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-23 15:23:46.418785",
+ "modified": "2025-06-26 11:06:08.772368",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",
