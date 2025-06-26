@@ -9,7 +9,8 @@
   "qr_code",
   "item_code",
   "item_name",
-  "dispatch_reference"
+  "dispatch_reference",
+  "delivery_note"
  ],
  "fields": [
   {
@@ -37,12 +38,19 @@
    "in_list_view": 1,
    "label": "Dispatch Reference",
    "options": "Dispatch Sheet"
+  },
+  {
+   "fieldname": "delivery_note",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Delivery Note",
+   "options": "Delivery Note"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-26 12:04:39.519811",
+ "modified": "2025-06-26 16:25:59.195972",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Returned Item",
