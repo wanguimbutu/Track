@@ -18,9 +18,11 @@
   "section_break_cleq",
   "manufacture_reference",
   "return_reference",
+  "dispatch_reference",
   "column_break_wviw",
   "manufacture_date",
-  "return_date"
+  "return_date",
+  "dispatch_date"
  ],
  "fields": [
   {
@@ -104,11 +106,22 @@
    "fieldname": "return_date",
    "fieldtype": "Datetime",
    "label": "Return Date"
+  },
+  {
+   "fieldname": "dispatch_reference",
+   "fieldtype": "Link",
+   "label": "Dispatch Reference",
+   "options": "Dispatch Sheet"
+  },
+  {
+   "fieldname": "dispatch_date",
+   "fieldtype": "Date",
+   "label": "Dispatch Date"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-26 11:06:08.772368",
+ "modified": "2025-06-26 11:46:53.931646",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",

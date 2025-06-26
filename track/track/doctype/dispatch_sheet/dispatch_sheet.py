@@ -38,9 +38,15 @@ def fetch_qr_details_for_dispatch(docname):
 
 def on_submit(doc, method):
     """
-    On Submit hook for Dispatch Sheet — updates Scan Log entries
-    to mark the QR codes as 'Dispatched'
+    On Submit hook for Dispatch Sheet — updates Scan Log entries:
+    - status = 'Dispatched'
+    - dispatch_reference = Dispatch Sheet name
+    - date = Dispatch Sheet date
     """
     for row in doc.dispatch_qr_codes:
         if row.qr_code:
-            frappe.db.set_value("Scan Log", row.qr_code, "status", "Dispatched")
+            frappe.db.set_value("Scan Log", row.qr_code, {
+                "status": "Dispatched",
+                "dispatch_reference": doc.name,
+                "date": doc.date  
+            })
