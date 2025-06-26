@@ -31,7 +31,6 @@ def fetch_qr_details_for_dispatch(docname):
 
         frappe.msgprint(f" Looking for QR Code: <b>{row.qr_code}</b>")
 
-        # ✅ Now correctly filtering by the qr_code field
         log = frappe.db.get_value("Scan Log", {"qr_code": row.qr_code}, ["item_code", "batch_no", "status"], as_dict=True)
 
         if log:
@@ -74,8 +73,14 @@ def on_submit(doc, method):
     """
     for row in doc.dispatch_qr_codes:
         if row.qr_code:
-            frappe.db.set_value("Scan Log", row.qr_code, {
-                "status": "Dispatched",
-                "dispatch_reference": doc.name,
-                "date": doc.date  
-            })
+            log_name = frappe.db.get_value("Scan Log", {"qr_code": row.qr_code})
+            
+            if log_name:
+                frappe.db.set_value("Scan Log", log_name, {
+                    "status": "Dispatched",
+                    "dispatch_reference": doc.name,
+                    "date": doc.date  
+                })
+            else:
+                frappe.msgprint(f"⚠️ Could not find Scan Log for QR Code: {row.qr_code}")
+
