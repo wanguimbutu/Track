@@ -9,27 +9,37 @@ class DeliveryReturn(Document):
     def on_submit_delivery_return(doc, method):
         """
         On Submit of Delivery Return:
-        - Update Scan Log for each QR code:
-            - status = 'Returned'
-            - dispatch_reference = preserved
-            - return_reference = this delivery return
+        - For each QR code in returned_items:
+            - Update Scan Log:
+                - status = 'Returned'
+                - return_reference = this Delivery Return doc
+                - return_date = doc.date
         """
         for row in doc.returned_items:
-            if row.qr_code:
-                frappe.db.set_value("Scan Log", row.qr_code, {
+            if not row.qr_code:
+                continue
+
+            qr_code = row.qr_code.strip()
+
+            scan_log_name = frappe.db.get_value("Scan Log", {"qr_code": qr_code})
+
+            if scan_log_name:
+                frappe.db.set_value("Scan Log", scan_log_name, {
                     "status": "Returned",
-					"return_reference": doc.name,
-					"return_date": doc.date   
-				})
+                    "return_reference": doc.name,
+                    "return_date": doc.date
+                })
+            else:
+                frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
+
 
 
 def validate_returned_qr_codes(doc, method):
     """
     On Save of Delivery Return:
     - For each QR code in returned_items:
-        - Must be in Scan Log with status == 'Dispatched'
+        - Must exist in Scan Log with status == 'Dispatched'
         - Fetch item_code, item_name, dispatch_reference
-    - Throw error if invalid QR codes found
     """
     invalid_qrs = []
 
@@ -37,10 +47,11 @@ def validate_returned_qr_codes(doc, method):
         if not row.qr_code:
             continue
 
-        log = frappe.db.get_value("Scan Log", row.qr_code, ["item_code", "dispatch_reference", "status"], as_dict=True)
+        qr_code = row.qr_code.strip()
+        log = frappe.db.get_value("Scan Log", {"qr_code": qr_code}, ["item_code", "dispatch_reference", "status"], as_dict=True)
 
         if not log or log.status != "Dispatched":
-            invalid_qrs.append(row.qr_code)
+            invalid_qrs.append(qr_code)
             continue
 
         row.item_code = log.item_code
@@ -82,5 +93,4 @@ def create_delivery_note_returns(docname):
         dn_return.insert(ignore_permissions=True)
 
     return "success"
-
 
