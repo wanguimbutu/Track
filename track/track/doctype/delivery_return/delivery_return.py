@@ -6,7 +6,9 @@ from frappe.model.document import Document
 
 
 class DeliveryReturn(Document):
-    def on_submit_delivery_return(doc, method):
+	pass
+
+def on_submit_delivery_return(doc, method):
         """
         On Submit of Delivery Return:
         - For each QR code in returned_items:
