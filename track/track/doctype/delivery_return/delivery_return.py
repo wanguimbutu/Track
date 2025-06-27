@@ -81,10 +81,10 @@ def create_delivery_note_returns(docname):
         # Group items by delivery note and item_code
         deliveries = {}
         for row in delivery_return.returned_items:
-            if not row.dispatch_reference:
-                frappe.throw(f"Dispatch Reference (Delivery Note) missing for QR Code: {row.qr_code}")
+            if not row.delivery_note:
+                frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
                 
-            delivery_note = row.dispatch_reference
+            delivery_note = row.delivery_note
             if delivery_note not in deliveries:
                 deliveries[delivery_note] = {}
             
@@ -119,8 +119,7 @@ def create_delivery_note_returns(docname):
                 # Set return flags
                 return_doc.is_return = 1
                 return_doc.return_against = dn_name
-                
-                # Copy other essential fields
+            
                 fields_to_copy = [
                     'currency', 'conversion_rate', 'selling_price_list',
                     'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
