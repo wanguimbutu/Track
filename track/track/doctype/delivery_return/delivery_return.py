@@ -3,9 +3,7 @@
  
 import frappe
 from frappe.model.document import Document
-from erpnext.stock.doctype.delivery_note.delivery_note import get_return_doc
-
-
+from frappe.utils import today, nowtime
 
 class DeliveryReturn(Document):
 	pass
@@ -69,30 +67,127 @@ def validate_returned_qr_codes(doc, method):
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
     """
-    Create Delivery Note Returns using ERPNext's built-in get_return_doc method.
-    Adds custom_returned_qr_codes for each QR code in Delivery Return.
+    Create Delivery Note Returns manually without relying on get_return_doc.
+    This approach is more reliable across different ERPNext versions.
     """
-    delivery_return = frappe.get_doc("Delivery Return", docname)
-    created_notes = []
+    try:
+        delivery_return = frappe.get_doc("Delivery Return", docname)
+        
+        if not delivery_return.returned_items:
+            frappe.throw("No returned items found in Delivery Return")
+            
+        created_notes = []
 
-    deliveries = {}
-    for row in delivery_return.returned_items:
-        if row.delivery_note not in deliveries:
-            deliveries[row.delivery_note] = []
-        deliveries[row.delivery_note].append(row)
+        # Group items by delivery note and item_code
+        deliveries = {}
+        for row in delivery_return.returned_items:
+            if not row.dispatch_reference:
+                frappe.throw(f"Dispatch Reference (Delivery Note) missing for QR Code: {row.qr_code}")
+                
+            delivery_note = row.dispatch_reference
+            if delivery_note not in deliveries:
+                deliveries[delivery_note] = {}
+            
+            # Group by item_code to aggregate quantities
+            item_code = row.item_code
+            if item_code not in deliveries[delivery_note]:
+                deliveries[delivery_note][item_code] = {
+                    'qty': 0,
+                    'qr_codes': []
+                }
+            
+            deliveries[delivery_note][item_code]['qty'] += 1  # Each QR = 1 qty
+            deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
 
-    for dn_name, rows in deliveries.items():
-        return_doc = get_return_doc("Delivery Note", dn_name)
+        # Create return documents for each delivery note
+        for dn_name, items_data in deliveries.items():
+            try:
+                # Get original delivery note
+                original_dn = frappe.get_doc("Delivery Note", dn_name)
+                if original_dn.docstatus != 1:
+                    frappe.throw(f"Delivery Note {dn_name} is not submitted")
+                
+                # Create return delivery note manually
+                return_doc = frappe.new_doc("Delivery Note")
+                
+                # Copy basic information from original
+                return_doc.customer = original_dn.customer
+                return_doc.company = original_dn.company
+                return_doc.posting_date = delivery_return.date or today()
+                return_doc.posting_time = nowtime()
+                
+                # Set return flags
+                return_doc.is_return = 1
+                return_doc.return_against = dn_name
+                
+                # Copy other essential fields
+                fields_to_copy = [
+                    'currency', 'conversion_rate', 'selling_price_list',
+                    'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
+                    'set_warehouse', 'target_warehouse', 'tc_name', 'terms',
+                    'customer_address', 'shipping_address_name', 'contact_person'
+                ]
+                
+                for field in fields_to_copy:
+                    if hasattr(original_dn, field) and getattr(original_dn, field):
+                        setattr(return_doc, field, getattr(original_dn, field))
+                
+                # Add items based on what's being returned
+                for item_code, item_data in items_data.items():
+                    # Find the original item in the delivery note
+                    original_item = None
+                    for item in original_dn.items:
+                        if item.item_code == item_code:
+                            original_item = item
+                            break
+                    
+                    if not original_item:
+                        frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
+                    
+                    # Add return item
+                    return_doc.append("items", {
+                        "item_code": item_code,
+                        "item_name": original_item.item_name,
+                        "description": original_item.description,
+                        "qty": item_data['qty'],  # Positive quantity for returns
+                        "uom": original_item.uom,
+                        "rate": original_item.rate,
+                        "warehouse": original_item.warehouse,
+                        "expense_account": getattr(original_item, 'expense_account', None),
+                        "cost_center": getattr(original_item, 'cost_center', None),
+                        "against_delivery_note": dn_name,
+                        "dn_detail": original_item.name
+                    })
+                
+                # Add custom QR codes tracking
+                if hasattr(return_doc, 'custom_returned_qr_codes'):
+                    for item_code, item_data in items_data.items():
+                        for qr_code in item_data['qr_codes']:
+                            return_doc.append("custom_returned_qr_codes", {
+                                "qr_code": qr_code,
+                                "qr_return_reference": delivery_return.name
+                            })
+                
+                # Save the return document
+                return_doc.insert(ignore_permissions=True)
+                
+                # Submit if auto-submit is enabled
+                if delivery_return.get('auto_submit_returns'):
+                    return_doc.submit()
+                
+                created_notes.append(return_doc.name)
+                
+            except Exception as e:
+                frappe.log_error(f"Error creating return for {dn_name}: {str(e)}")
+                frappe.throw(f"Error creating return for Delivery Note {dn_name}: {str(e)}")
 
-        # Add custom_returned_qr_codes
-        for row in rows:
-            return_doc.append("custom_returned_qr_codes", {
-                "qr_code": row.qr_code,
-                "qr_return_reference": delivery_return.name
-            })
-
-        return_doc.insert(ignore_permissions=True)
-        created_notes.append(return_doc.name)
-
-    frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
-    return created_notes
+        if created_notes:
+            frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
+        else:
+            frappe.msgprint("No Delivery Note Returns were created")
+            
+        return created_notes
+        
+    except Exception as e:
+        frappe.log_error(f"Error in create_delivery_note_returns: {str(e)}")
+        frappe.throw(f"Error creating delivery note returns: {str(e)}")
