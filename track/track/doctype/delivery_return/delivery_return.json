@@ -7,6 +7,7 @@
  "field_order": [
   "section_break_xy10",
   "date",
+  "column_break_shpd",
   "section_break_nlax",
   "returned_items",
   "section_break_jwuu",
@@ -45,12 +46,16 @@
   {
    "fieldname": "section_break_jwuu",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_shpd",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-26 12:04:01.049581",
+ "modified": "2025-06-27 10:55:59.356306",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Delivery Return",
@@ -67,6 +72,56 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "share": 1,
    "write": 1
   }
  ],
