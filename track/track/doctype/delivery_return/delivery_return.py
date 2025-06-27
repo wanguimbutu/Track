@@ -120,12 +120,29 @@ def create_delivery_note_returns(docname):
                 return_doc.is_return = 1
                 return_doc.return_against = dn_name
                 
+                # Copy delivery-related fields to avoid validation errors
+                if hasattr(original_dn, 'vehicle_no') and original_dn.vehicle_no:
+                    return_doc.vehicle_no = original_dn.vehicle_no
+                if hasattr(original_dn, 'driver_name') and original_dn.driver_name:
+                    return_doc.driver_name = original_dn.driver_name
+                if hasattr(original_dn, 'driver') and original_dn.driver:
+                    return_doc.driver = original_dn.driver
+                if hasattr(original_dn, 'transporter') and original_dn.transporter:
+                    return_doc.transporter = original_dn.transporter
+                if hasattr(original_dn, 'transporter_name') and original_dn.transporter_name:
+                    return_doc.transporter_name = original_dn.transporter_name
+                if hasattr(original_dn, 'lr_no') and original_dn.lr_no:
+                    return_doc.lr_no = original_dn.lr_no
+                if hasattr(original_dn, 'lr_date') and original_dn.lr_date:
+                    return_doc.lr_date = original_dn.lr_date
+                
                 # Copy other essential fields
                 fields_to_copy = [
                     'currency', 'conversion_rate', 'selling_price_list',
                     'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
                     'set_warehouse', 'target_warehouse', 'tc_name', 'terms',
-                    'customer_address', 'shipping_address_name', 'contact_person'
+                    'customer_address', 'shipping_address_name', 'contact_person',
+                    'territory', 'sales_team'
                 ]
                 
                 for field in fields_to_copy:
@@ -144,12 +161,12 @@ def create_delivery_note_returns(docname):
                     if not original_item:
                         frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
                     
-                    # Add return item
+                    # Add return item with negative quantity for returns
                     return_doc.append("items", {
                         "item_code": item_code,
                         "item_name": original_item.item_name,
                         "description": original_item.description,
-                        "qty": item_data['qty'],  # Positive quantity for returns
+                        "qty": -abs(item_data['qty']),  # Negative quantity for returns
                         "uom": original_item.uom,
                         "rate": original_item.rate,
                         "warehouse": original_item.warehouse,
@@ -170,6 +187,10 @@ def create_delivery_note_returns(docname):
                                 "qr_return_reference": delivery_return.name
                             })
                 
+                # Set ignore validation flags to bypass some checks during insert
+                return_doc.flags.ignore_validate_update_after_submit = True
+                return_doc.flags.ignore_permissions = True
+                
                 # Save the return document
                 return_doc.insert(ignore_permissions=True)
                 
@@ -180,8 +201,13 @@ def create_delivery_note_returns(docname):
                 created_notes.append(return_doc.name)
                 
             except Exception as e:
-                frappe.log_error(f"Error creating return for {dn_name}: {str(e)}")
-                frappe.throw(f"Error creating return for Delivery Note {dn_name}: {str(e)}")
+                error_msg = str(e)
+                frappe.log_error(f"Error creating return for {dn_name}: {error_msg}", "Delivery Return Creation Error")
+                # More specific error handling
+                if "vehicle_no" in error_msg or "driver_name" in error_msg:
+                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: Missing required delivery fields (vehicle_no, driver_name). Please ensure the original delivery note has these fields filled.")
+                else:
+                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: {error_msg}")
 
         if created_notes:
             frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
@@ -191,5 +217,6 @@ def create_delivery_note_returns(docname):
         return created_notes
         
     except Exception as e:
-        frappe.log_error(f"Error in create_delivery_note_returns: {str(e)}")
-        frappe.throw(f"Error creating delivery note returns: {str(e)}")
+        error_msg = str(e)
+        frappe.log_error(f"Error in create_delivery_note_returns: {error_msg}", "Delivery Return Function Error")
+        frappe.throw(f"Error creating delivery note returns: {error_msg}")
