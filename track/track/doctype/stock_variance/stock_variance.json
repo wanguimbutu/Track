@@ -8,11 +8,11 @@
   "date",
   "column_break_ogbd",
   "stock_take",
+  "amended_from",
   "section_break_yggf",
   "stock_variance_details",
   "section_break_mtml",
-  "qr_code_variance_details",
-  "amended_from"
+  "qr_code_variance_details"
  ],
  "fields": [
   {
@@ -64,7 +64,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-24 11:37:15.916764",
+ "modified": "2025-06-27 10:48:34.555441",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Variance",
