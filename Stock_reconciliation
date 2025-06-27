@@ -1,0 +1,192 @@
+frappe.ui.form.on('Stock Reconciliation', {
+    refresh: function(frm) {
+    },
+    
+    scan_qrcode: function(frm) {
+        if (frm.doc.scan_qrcode) {
+            process_scanned_code(frm, frm.doc.scan_qrcode);
+        }
+    }
+});
+
+function process_scanned_code(frm, scanned_code) {
+    frappe.show_alert({
+        message: __('Processing scanned code...'),
+        indicator: 'blue'
+    });
+    
+    frappe.call({
+        method: 'frappe_client_get',
+        args: {
+            doctype: 'Item',
+            filters: [
+                ['Item qrcode', '=', scanned_code]
+            ],
+            fields: ['name', 'item_code', 'item_name', 'description', 'stock_uom', 'item_group']
+        },
+        callback: function(r) {
+            if (r.message && r.message.length > 0) {
+                let item = r.message[0];
+                add_item_to_stock_entry(frm, item, scanned_code);
+            } else {
+                search_item_by_code(frm, scanned_code);
+            }
+        }
+    });
+}
+
+function search_item_by_code(frm, code) {
+    frappe.call({
+        method: 'frappe_client_get',
+        args: {
+            doctype: 'Item',
+            name: code
+        },
+        callback: function(r) {
+            if (r.message) {
+                add_item_to_stock_entry(frm, r.message, code);
+            } else {
+                frappe.call({
+                    method: 'frappe.client.get_list',
+                    args: {
+                        doctype: 'Item',
+                        filters: [
+                            ['item_code', 'like', '%' + code + '%']
+                        ],
+                        fields: ['name', 'item_code', 'item_name', 'description', 'stock_uom', 'item_group'],
+                        limit_page_length: 10
+                    },
+                    callback: function(r) {
+                        if (r.message && r.message.length > 0) {
+                            if (r.message.length === 1) {
+                                add_item_to_stock_entry(frm, r.message[0], code);
+                            } else {
+                                show_item_selection_dialog(frm, r.message, code);
+                            }
+                        } else {
+                            frappe.msgprint(__('No item found for code: {0}', [code]));
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function show_item_selection_dialog(frm, items, scanned_code) {
+    let dialog = new frappe.ui.Dialog({
+        title: __('Select Item'),
+        fields: [
+            {
+                fieldname: 'item_selection',
+                fieldtype: 'Select',
+                label: __('Found Items'),
+                options: items.map(item => ({
+                    label: `${item.item_code} - ${item.item_name}`,
+                    value: item.name
+                })),
+                reqd: 1
+            }
+        ],
+        primary_action_label: __('Select'),
+        primary_action: function(values) {
+            let selected_item = items.find(item => item.name === values.item_selection);
+            if (selected_item) {
+                add_item_to_stock_entry(frm, selected_item, scanned_code);
+                dialog.hide();
+            }
+        }
+    });
+    
+    dialog.show();
+}
+
+function add_item_to_stock_entry(frm, item, scanned_code) {
+    let warehouse = frm.doc.all_warehouses || frm.doc.finished_goods;
+    
+    if (warehouse) {
+        frappe.call({
+            method: 'frappe.client.get_stock_balance',
+            args: {
+                item_code: item.item_code,
+                warehouse: warehouse,
+                company: frm.doc.company
+            },
+            callback: function(r) {
+                let current_qty = r.message || 0;
+                populate_item_row(frm, item, scanned_code, current_qty);
+            }
+        });
+    } else {
+        populate_item_row(frm, item, scanned_code, 0);
+    }
+}
+
+function populate_item_row(frm, item, scanned_code, current_qty) {
+    let row = frm.add_child('items');
+    
+    row.item_code = item.item_code;
+    row.item_name = item.item_name;
+    row.description = item.description;
+    row.uom = item.stock_uom;
+    row.stock_uom = item.stock_uom;
+    row.conversion_factor = 1;
+    
+    if (frm.doc.default_source_warehouse) {
+        row.s_warehouse = frm.doc.default_source_warehouse;
+    }
+    if (frm.doc.default_target_warehouse) {
+        row.t_warehouse = frm.doc.default_target_warehouse;
+    }
+    
+    row.qty = 1;
+    
+    if (current_qty > 0) {
+        row.description = (row.description || '') + `\n[Current Stock: ${current_qty}]`;
+    }
+    
+    frm.refresh_field('items');
+    
+    // Only add to scan log if the table exists
+    try {
+        let log_row = frm.add_child('qr_scan_log_table');
+        log_row.item_code = item.item_code;
+        log_row.scanned_code = scanned_code;
+        log_row.timestamp = frappe.datetime.now_datetime();
+        frm.refresh_field('qr_scan_log_table');
+    } catch (e) {
+        console.log('QR scan log table not available');
+    }
+    
+    frm.set_value('scan_qrcode', '');
+    
+    frappe.show_alert({
+        message: __('Item {0} added successfully', [item.item_code]),
+        indicator: 'green'
+    });
+    
+    calculate_rate_and_amount(frm, row);
+}
+
+function calculate_rate_and_amount(frm, row) {
+    frappe.call({
+        method: 'frappe.client.get_item_details',
+        args: {
+            args: {
+                item_code: row.item_code,
+                company: frm.doc.company,
+                uom: row.uom,
+                stock_uom: row.stock_uom,
+                conversion_factor: row.conversion_factor,
+                warehouse: row.s_warehouse || row.t_warehouse
+            }
+        },
+        callback: function(r) {
+            if (r.message) {
+                row.basic_rate = r.message.valuation_rate || 0;
+                row.basic_amount = row.qty * row.basic_rate;
+                frm.refresh_field('items');
+            }
+        }
+    });
+}
