@@ -119,7 +119,8 @@ def create_delivery_note_returns(docname):
                 # Set return flags
                 return_doc.is_return = 1
                 return_doc.return_against = dn_name
-            
+                
+                # Copy other essential fields
                 fields_to_copy = [
                     'currency', 'conversion_rate', 'selling_price_list',
                     'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
@@ -155,7 +156,9 @@ def create_delivery_note_returns(docname):
                         "expense_account": getattr(original_item, 'expense_account', None),
                         "cost_center": getattr(original_item, 'cost_center', None),
                         "against_delivery_note": dn_name,
-                        "dn_detail": original_item.name
+                        "dn_detail": original_item.name,
+                        "against_sales_order": getattr(original_item, 'against_sales_order', None),
+                        "so_detail": getattr(original_item, 'so_detail', None)
                     })
                 
                 # Add custom QR codes tracking
