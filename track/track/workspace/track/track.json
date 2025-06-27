@@ -1,0 +1,78 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"ricw8m9OR9\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Track</span>\",\"col\":12}},{\"id\":\"3Zkq_9yO-R\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Take\",\"col\":3}},{\"id\":\"-z0HbqNwiu\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dispatch Sheet\",\"col\":3}},{\"id\":\"I-ZN7IJaA7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"QR Code\",\"col\":3}},{\"id\":\"3F-_WbXlpR\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Scan Log\",\"col\":3}},{\"id\":\"pdBoYXQ58N\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Variance\",\"col\":3}},{\"id\":\"UxFvOG5N2o\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Delivery Return\",\"col\":3}}]",
+ "creation": "2025-06-26 09:16:33.217208",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "table",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Track",
+ "links": [],
+ "modified": "2025-06-27 11:03:26.187179",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Track",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "Stock",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 44.0,
+ "shortcuts": [
+  {
+   "color": "Pink",
+   "doc_view": "List",
+   "label": "Dispatch Sheet",
+   "link_to": "Dispatch Sheet",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Stock Take",
+   "link_to": "Stock Take",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "QR Code",
+   "link_to": "Qr Codes",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Scan Log",
+   "link_to": "Scan Log",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Stock Variance",
+   "link_to": "Stock Variance",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Delivery Return",
+   "link_to": "Delivery Return",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Track"
+}
