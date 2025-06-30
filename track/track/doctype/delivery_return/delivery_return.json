@@ -56,13 +56,14 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
-   "label": "Series"
+   "label": "Series",
+   "options": "DRET-.YYYY.-"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-30 16:24:33.244102",
+ "modified": "2025-06-30 16:39:13.154581",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Delivery Return",

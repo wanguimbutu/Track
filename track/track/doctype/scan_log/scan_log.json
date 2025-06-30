@@ -122,12 +122,13 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
-   "label": "Series"
+   "label": "Series",
+   "options": "SCAN-.YYYY.-"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-30 16:22:01.108436",
+ "modified": "2025-06-30 16:40:22.573625",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",
