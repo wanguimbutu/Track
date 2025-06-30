@@ -144,6 +144,9 @@ doc_events = {
     "Delivery Return": {
         "before_save": "track.track.doctype.delivery_return.delivery_return.validate_returned_qr_codes",
         "on_submit": "track.track.doctype.delivery_return.delivery_return.on_submit_delivery_return"
+    },
+    "Scan Log": {
+        "validate": "track.track.doctype.scan_log.scan_log.validate_qr_code_exists"
     }
  }
 
