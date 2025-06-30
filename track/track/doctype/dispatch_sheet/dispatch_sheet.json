@@ -1,11 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2025-06-26 10:21:19.395239",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "section_break_gmae",
+  "naming_series",
+  "column_break_qmor",
   "date",
   "section_break_smfx",
   "dispatch_qr_codes",
@@ -58,15 +61,25 @@
    "fieldtype": "Table",
    "label": "Loading Sheet",
    "options": "Dispatched Loading Sheet"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
+  },
+  {
+   "fieldname": "column_break_qmor",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-30 16:17:29.239240",
+ "modified": "2025-06-30 16:21:35.183998",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Dispatch Sheet",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {

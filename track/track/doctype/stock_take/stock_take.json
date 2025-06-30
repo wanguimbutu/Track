@@ -1,12 +1,15 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2025-06-23 16:25:32.604029",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "section_break_ygtq",
   "date",
+  "column_break_nfwy",
+  "naming_series",
   "section_break_gtcm",
   "stock_take_details",
   "section_break_nzjk",
@@ -46,15 +49,25 @@
    "fieldtype": "Table",
    "label": "Stock Take Details",
    "options": "Stock Take Table"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
+  },
+  {
+   "fieldname": "column_break_nfwy",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-27 10:58:14.337469",
+ "modified": "2025-06-30 16:23:59.229806",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Take",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {

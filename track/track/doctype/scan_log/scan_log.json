@@ -1,12 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2025-06-18 16:41:02.133150",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "qr_code",
   "status",
+  "naming_series",
   "column_break_frop",
   "date",
   "section_break_cmow",
@@ -116,11 +118,16 @@
    "fieldname": "dispatch_date",
    "fieldtype": "Date",
    "label": "Dispatch Date"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-30 11:48:35.596974",
+ "modified": "2025-06-30 16:22:01.108436",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",
