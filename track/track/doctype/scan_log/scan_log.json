@@ -6,9 +6,9 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "naming_series",
   "qr_code",
   "status",
-  "naming_series",
   "column_break_frop",
   "date",
   "section_break_cmow",
@@ -122,16 +122,19 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Series",
-   "options": "SCAN-.YYYY.-"
+   "options": "SCAN-.YYYY.-",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-30 16:40:22.573625",
+ "modified": "2025-06-30 16:53:12.392703",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
