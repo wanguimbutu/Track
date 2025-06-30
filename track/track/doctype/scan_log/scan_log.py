@@ -10,7 +10,7 @@ import os
 class ScanLog(Document):
 	pass
 
-
+@frappe.whitelist(allow_guest=False)
 def validate_qr_code_exists(doc, method):
     qr_code_value = doc.qr_code
 
