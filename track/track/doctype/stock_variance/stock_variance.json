@@ -6,8 +6,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "date",
   "naming_series",
+  "date",
   "column_break_ogbd",
   "stock_take",
   "amended_from",
@@ -65,14 +65,16 @@
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Series",
-   "options": "STV-.YYYY.-"
+   "options": "STV-.YYYY.-",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-30 16:39:54.713065",
+ "modified": "2025-06-30 16:53:24.683097",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Variance",
