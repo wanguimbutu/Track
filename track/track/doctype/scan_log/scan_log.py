@@ -18,7 +18,7 @@ def validate_qr_code_exists(doc, method):
     api_key = frappe.conf.get("site_b_api_key") or os.getenv("SITE_B_API_KEY")
     api_secret = frappe.conf.get("site_b_api_secret") or os.getenv("SITE_B_API_SECRET")
 
-    url = "https://site-b.example.com/api/method/code_tracking.code_tracking.doctype.qr_codes.qr_codes.check_qr_exists"
+    url = "https://erpnext-195181-0.cloudclusters.net/api/method/code_tracking.code_tracking.doctype.qr_codes.qr_codes.check_qr_exists"
     response = requests.get(
         url,
         params={"qr_code": qr_code_value},
