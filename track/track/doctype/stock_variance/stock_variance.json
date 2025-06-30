@@ -1,11 +1,13 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2025-06-23 16:33:07.252695",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "date",
+  "naming_series",
   "column_break_ogbd",
   "stock_take",
   "amended_from",
@@ -59,15 +61,21 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-27 10:55:03.845303",
+ "modified": "2025-06-30 16:23:24.535928",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Variance",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {

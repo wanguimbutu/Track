@@ -17,7 +17,12 @@ frappe.ui.form.on('Stock Take', {
                 }
             });
         });
+    },
+     onload: function(frm) {
+    if (frm.is_new() && !frm.doc.date) {
+      frm.set_value('date', frappe.datetime.get_today());
     }
+  }
 });
  /*frappe.ui.form.on('Stock Take Table', {
     qr_code: function(frm, cdt, cdn) {

@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "naming_series:",
  "creation": "2025-06-26 12:03:08.192793",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,6 +9,7 @@
   "section_break_xy10",
   "date",
   "column_break_shpd",
+  "naming_series",
   "section_break_nlax",
   "returned_items",
   "section_break_jwuu",
@@ -50,15 +52,21 @@
   {
    "fieldname": "column_break_shpd",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-27 10:55:59.356306",
+ "modified": "2025-06-30 16:24:33.244102",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Delivery Return",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
