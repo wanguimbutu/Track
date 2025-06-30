@@ -8,10 +8,7 @@
  "field_order": [
   "qr_code",
   "column_break_vjlm",
-  "creation_date",
-  "section_break_cici",
-  "item",
-  "item_name"
+  "creation_date"
  ],
  "fields": [
   {
@@ -32,27 +29,11 @@
    "in_list_view": 1,
    "label": "Creation Date",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_cici",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "item",
-   "fieldtype": "Link",
-   "label": "Item",
-   "options": "Item"
-  },
-  {
-   "fetch_from": "item.item_name",
-   "fieldname": "item_name",
-   "fieldtype": "Read Only",
-   "label": "Item Name"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-27 10:58:47.444689",
+ "modified": "2025-06-30 11:45:26.160072",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Qr Codes",
