@@ -53,4 +53,4 @@ def auto_select_batches(doc, method=None):
         except Exception as e:
             frappe.log_error(f"Auto batch selection failed for {item.item_code}: {str(e)}")
 
-    doc.save()  # Save all changes after processing
+   # doc.save()  # Save all changes after processing
