@@ -20,5 +20,10 @@ frappe.ui.form.on('Delivery Return', {
                 });
             });
         }
+    },
+     onload: function(frm) {
+    if (frm.is_new() && !frm.doc.date) {
+      frm.set_value('date', frappe.datetime.get_today());
     }
+  }
 });
