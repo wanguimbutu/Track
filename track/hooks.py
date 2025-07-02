@@ -147,6 +147,9 @@ doc_events = {
     },
     "Scan Log": {
         "validate": "track.track.doctype.scan_log.scan_log.validate_qr_code_exists"
+    },
+    "Delivery Note": {
+        "after_save":" track.track.api.delivery_note_hook.auto_select_batches",
     }
  }
 
