@@ -66,21 +66,39 @@ def fetch_qr_details_for_dispatch(docname):
 
 def on_submit(doc, method):
     """
-    On Submit hook for Dispatch Sheet — updates Scan Log entries:
+    On Submit hook for Dispatch Sheet — validates QR code count and updates Scan Log entries:
     - status = 'Dispatched'
     - dispatch_reference = Dispatch Sheet name
     - date = Dispatch Sheet date
     """
+
+    # 1. Validate QR count
+    total_loading_qty = 0
+    if doc.loading_sheets:
+        for loading_sheet_link in doc.loading_sheets:
+            loading_doc = frappe.get_doc("Loading Sheet", loading_sheet_link.loading_sheet)
+            for row in loading_doc.loading_sheet_items:
+                total_loading_qty += row.qty
+
+    qr_count = len([row for row in doc.dispatch_qr_codes if row.qr_code])
+
+    if qr_count != total_loading_qty:
+        frappe.throw(f"""
+            QR Code count mismatch:
+            <br><b>Total QR Codes:</b> {qr_count}
+            <br><b>Total Quantity in Loading Sheets:</b> {total_loading_qty}
+            <br>Please ensure the number of QR codes matches the quantity across all loading sheets.
+        """)
+
+    # 2. Update Scan Log
     for row in doc.dispatch_qr_codes:
         if row.qr_code:
             log_name = frappe.db.get_value("Scan Log", {"qr_code": row.qr_code})
-            
             if log_name:
                 frappe.db.set_value("Scan Log", log_name, {
                     "status": "Dispatched",
                     "dispatch_reference": doc.name,
-                    "date": doc.date  
+                    "date": doc.date
                 })
             else:
                 frappe.msgprint(f"⚠️ Could not find Scan Log for QR Code: {row.qr_code}")
-
