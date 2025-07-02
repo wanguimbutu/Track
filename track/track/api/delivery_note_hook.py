@@ -15,6 +15,8 @@ def auto_select_batches(doc, method=None):
             if not item_doc.has_batch_no:
                 continue
 
+            frappe.logger().info(f"Processing {item.item_code} in {item.warehouse} for qty {item.qty}")
+
             batches = get_auto_batch_nos({
                 'item_code': item.item_code,
                 'warehouse': item.warehouse,
@@ -33,7 +35,7 @@ def auto_select_batches(doc, method=None):
                 'type_of_transaction': 'Outward',
                 'voucher_type': 'Delivery Note',
                 'reference_doctype': 'Delivery Note',
-                'reference_name': doc.name,
+                'reference_name': doc.get('name') or 'TEMP',
                 'entries': [
                     {
                         'batch_no': batch.get('batch_no'),
@@ -46,5 +48,9 @@ def auto_select_batches(doc, method=None):
             bundle_doc.insert(ignore_permissions=True)
             item.serial_and_batch_bundle = bundle_doc.name
 
+            frappe.msgprint(f"✔️ Batch bundle created for {item.item_code}: {bundle_doc.name}")
+
         except Exception as e:
             frappe.log_error(f"Auto batch selection failed for {item.item_code}: {str(e)}")
+
+    doc.save()  # Save all changes after processing
