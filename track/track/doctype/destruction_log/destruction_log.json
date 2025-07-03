@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-07-03 13:06:28.232298",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_zklh",
+  "qr_code",
+  "column_break_kvzm",
+  "scan_log",
+  "batch_no",
+  "section_break_noiu",
+  "item_code",
+  "dispatch_date",
+  "reference_date",
+  "column_break_eoxo",
+  "dispatch_reference",
+  "return_reference",
+  "section_break_jrkn",
+  "reason",
+  "column_break_jyio",
+  "destroyed_by",
+  "destruction_time",
+  "section_break_hggx",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_zklh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Destruction Log",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Data",
+   "label": "Qr Code"
+  },
+  {
+   "fieldname": "section_break_hggx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_kvzm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "scan_log",
+   "fieldtype": "Link",
+   "label": "Scan Log",
+   "options": "Scan Log"
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "label": "Batch No",
+   "options": "Batch"
+  },
+  {
+   "fieldname": "section_break_noiu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item Code",
+   "options": "Item"
+  },
+  {
+   "fieldname": "dispatch_date",
+   "fieldtype": "Date",
+   "label": "Dispatch Date"
+  },
+  {
+   "fieldname": "reference_date",
+   "fieldtype": "Date",
+   "label": "Reference Date"
+  },
+  {
+   "fieldname": "column_break_eoxo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dispatch_reference",
+   "fieldtype": "Link",
+   "label": "Dispatch Reference",
+   "options": "Dispatch Sheet"
+  },
+  {
+   "fieldname": "return_reference",
+   "fieldtype": "Link",
+   "label": "Return Reference",
+   "options": "Delivery Return"
+  },
+  {
+   "fieldname": "section_break_jrkn",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "column_break_jyio",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "destroyed_by",
+   "fieldtype": "Link",
+   "label": "Destroyed By",
+   "options": "User"
+  },
+  {
+   "fieldname": "destruction_time",
+   "fieldtype": "Datetime",
+   "label": "Destruction Time"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-07-03 14:13:24.843336",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "Destruction Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -24,7 +24,9 @@
   "column_break_wviw",
   "manufacture_date",
   "return_date",
-  "dispatch_date"
+  "dispatch_date",
+  "section_break_rfdm",
+  "comments"
  ],
  "fields": [
   {
@@ -36,7 +38,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Manufactured\nFG Store\nDispatched\nReturned\nReconciled"
+   "options": "Manufactured\nFG Store\nDispatched\nReturned\nReconciled\nDestroyed"
   },
   {
    "fieldname": "column_break_frop",
@@ -126,11 +128,20 @@
    "label": "Series",
    "options": "SCAN-.YYYY.-",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_rfdm",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "comments",
+   "fieldtype": "Small Text",
+   "label": "Comments"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-06-30 16:53:12.392703",
+ "modified": "2025-07-03 12:30:40.579216",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",

@@ -16,7 +16,8 @@
    "fieldname": "qr_code",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Qr Code"
+   "label": "Qr Code",
+   "reqd": 1
   },
   {
    "fieldname": "item_code",
@@ -42,7 +43,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-24 11:22:19.020375",
+ "modified": "2025-07-03 11:08:10.393078",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Stock Take Table",

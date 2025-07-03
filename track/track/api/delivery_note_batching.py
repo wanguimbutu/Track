@@ -1,3 +1,7 @@
+# Copyright (c) 2025, wanguimbutu and contributors
+# For license information, please see license.txt
+
+# This code is part of Track and released under the GNU General Public License v3.0.
 import frappe
 from frappe import _
 from frappe.utils import cint

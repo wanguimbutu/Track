@@ -12,6 +12,8 @@
   "naming_series",
   "section_break_nlax",
   "returned_items",
+  "section_break_fwtu",
+  "invalid_items",
   "section_break_jwuu",
   "amended_from"
  ],
@@ -60,12 +62,22 @@
    "label": "Series",
    "options": "DRET-.YYYY.-",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_fwtu",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "invalid_items",
+   "fieldtype": "Table",
+   "label": "Invalid Items",
+   "options": "Returned Invalid Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-30 16:53:50.545626",
+ "modified": "2025-07-03 11:39:52.262728",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Delivery Return",
