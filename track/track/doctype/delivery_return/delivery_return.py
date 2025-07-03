@@ -14,6 +14,7 @@ def on_submit_delivery_return(doc, method):
 	- Update returned QR codes
 	- Handle damaged or unreadable QR returns
 	- Mark as Destroyed if needed and log in Destruction Log
+	- Create replacement Scan Logs using replacement_qr_code field
 	"""
 
 	# Get damaged warehouse (if defined)
@@ -73,7 +74,7 @@ def on_submit_delivery_return(doc, method):
 	if hasattr(doc, 'invalid_items'):
 		for invalid in doc.invalid_items:
 			if not invalid.delivery_note:
-				frappe.msgprint(f"Missing Delivery Note for invalid item. Skipping.")
+				frappe.msgprint("Missing Delivery Note for invalid item. Skipping.")
 				continue
 
 			dispatch_sheet = frappe.db.get_value("Delivery Note", invalid.delivery_note, "custom_dispatch_sheet")
@@ -98,7 +99,7 @@ def on_submit_delivery_return(doc, method):
 					batch_no = dn_item.batch_no
 
 			if not item_code or not batch_no:
-				frappe.msgprint(f"Could not determine item_code or batch_no for invalid return. Skipping.")
+				frappe.msgprint(f"Could not determine item_code or batch_no for invalid return from {invalid.delivery_note}. Skipping.")
 				continue
 
 			# Find a dispatched QR code from that batch
@@ -141,14 +142,16 @@ def on_submit_delivery_return(doc, method):
 				"destruction_time": now_datetime()
 			}).insert(ignore_permissions=True)
 
-			# Create new Scan Log if replacement QR is given
-			if invalid.qr_code:
-				if frappe.db.exists("Scan Log", {"qr_code": invalid.qr_code.strip()}):
-					frappe.throw(f"QR Code {invalid.qr_code} already exists in Scan Log.")
+			# Create new Scan Log if replacement QR code is provided
+			if invalid.replacement_qr_code:
+				replacement_qr = invalid.replacement_qr_code.strip()
+
+				if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
+					frappe.throw(f"Replacement QR Code {replacement_qr} already exists in Scan Log.")
 
 				frappe.get_doc({
 					"doctype": "Scan Log",
-					"qr_code": invalid.qr_code.strip(),
+					"qr_code": replacement_qr,
 					"item_code": item_code,
 					"batch_no": batch_no,
 					"status": "Returned",
@@ -157,7 +160,7 @@ def on_submit_delivery_return(doc, method):
 					"dispatch_reference": dispatch_sheet
 				}).insert(ignore_permissions=True)
 
-				frappe.msgprint(f"Replacement QR Code <b>{invalid.qr_code}</b> created and marked as Returned.")
+				frappe.msgprint(f"Replacement QR Code <b>{replacement_qr}</b> created and marked as Returned.")
 			else:
 				frappe.msgprint(f"QR Code <b>{dispatched_log.qr_code}</b> marked as Destroyed (unreadable, no replacement).")
 

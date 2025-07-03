@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "qr_code",
-  "delivery_note"
+  "delivery_note",
+  "replacement_qr_code"
  ],
  "fields": [
   {
@@ -22,12 +23,17 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Qr Code"
+  },
+  {
+   "fieldname": "replacement_qr_code",
+   "fieldtype": "Data",
+   "label": "Replacement Qr Code"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-03 11:40:07.868054",
+ "modified": "2025-07-03 15:44:19.848977",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Returned Invalid Item",
