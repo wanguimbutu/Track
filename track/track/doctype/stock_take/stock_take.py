@@ -15,21 +15,31 @@ class StockTake(Document):
 
     def create_stock_variance(self):
         item_qty_map = {}
-        found_qr_codes = set()
-        missing_qr_codes = []
+        stock_take_qr_codes = set()
 
+        # Step 1: Collect data from stock take
         for row in self.stock_take_details:
-            # Aggregate item counts
             if row.item_code:
                 item_qty_map.setdefault(row.item_code, 0)
                 item_qty_map[row.item_code] += 1
 
             if row.qr_code:
-                if frappe.db.exists("Scan Log", {"qr_code": row.qr_code}):
-                    found_qr_codes.add(row.qr_code)
-                else:
-                    missing_qr_codes.append(row.qr_code)
+                stock_take_qr_codes.add(row.qr_code)
 
+        # Step 2: Get relevant QR codes from Scan Log (status: FG Store, Returned, Manufactured)
+        valid_statuses = ["FG Store", "Returned", "Manufactured"]
+        scan_qr_entries = frappe.get_all("Scan Log",
+            filters={"status": ["in", valid_statuses]},
+            fields=["qr_code", "status"]
+        )
+
+        scan_qr_code_map = {entry.qr_code: entry.status for entry in scan_qr_entries}
+
+        # Step 3: Identify missing QR codes
+        all_valid_qr_codes = set(scan_qr_code_map.keys())
+        missing_qr_codes = all_valid_qr_codes - stock_take_qr_codes
+
+        # Step 4: Create Stock Variance document
         variance_doc = frappe.new_doc("Stock Variance")
         variance_doc.date = self.date
         variance_doc.stock_take = self.name
@@ -46,11 +56,9 @@ class StockTake(Document):
             })
 
         for qr_code in missing_qr_codes:
-            status = frappe.db.get_value("Scan Log", {"qr_code": qr_code}, "status") or "Missing"
-
             variance_doc.append("qr_code_variance_details", {
                 "qr_code": qr_code,
-                "status": status
+                "status": scan_qr_code_map.get(qr_code, "Missing")
             })
 
         variance_doc.insert(ignore_permissions=True)
