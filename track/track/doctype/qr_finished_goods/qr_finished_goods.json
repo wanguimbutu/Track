@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-07-03 08:42:15.262372",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "finished_goods"
+ ],
+ "fields": [
+  {
+   "fieldname": "finished_goods",
+   "fieldtype": "Table",
+   "label": "Finished Goods",
+   "options": "Finished Goods"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-07-03 08:42:39.680084",
+ "modified_by": "Administrator",
+ "module": "Track",
+ "name": "QR Finished Goods",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
