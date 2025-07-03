@@ -175,7 +175,8 @@ def create_delivery_note_returns(docname):
                         "against_delivery_note": dn_name,
                         "dn_detail": original_item.name,
                         "against_sales_order": getattr(original_item, 'against_sales_order', None),
-                        "so_detail": getattr(original_item, 'so_detail', None)
+                        "so_detail": getattr(original_item, 'so_detail', None),
+                        "serial_and_batch_bundle": getattr(original_item, 'serial_and_batch_bundle', None)
                     })
                 
                 # Add custom QR codes tracking
