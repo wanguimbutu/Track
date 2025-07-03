@@ -17,9 +17,6 @@ def on_submit_delivery_return(doc, method):
 	- Create replacement Scan Logs using replacement_qr_code field
 	"""
 
-	# Get damaged warehouse (if defined)
-	damaged_warehouse = frappe.db.get_single_value("Stock Settings", "default_damaged_warehouse")
-
 	# --- 1. Process normal returned_items
 	for row in doc.returned_items:
 		if not row.qr_code:
@@ -32,43 +29,12 @@ def on_submit_delivery_return(doc, method):
 			frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
 			continue
 
-		# Get return warehouse
-		return_to_warehouse = getattr(row, "target_warehouse", None) or getattr(doc, "target_warehouse", None)
-
-		# Get Scan Log info
-		scan_log = frappe.db.get_value("Scan Log", scan_log_name, ["item_code", "batch_no", "dispatch_reference"], as_dict=True)
-
-		if damaged_warehouse and return_to_warehouse == damaged_warehouse:
-			# Mark as destroyed
-			frappe.db.set_value("Scan Log", scan_log_name, {
-				"status": "Destroyed",
-				"return_reference": doc.name,
-				"return_date": doc.date,
-				"comments": f"Item damaged on return. Sent to damaged warehouse via {doc.name}"
-			})
-
-			# Create Destruction Log
-			frappe.get_doc({
-				"doctype": "Destruction Log",
-				"qr_code": qr_code,
-				"item_code": scan_log.item_code,
-				"batch_no": scan_log.batch_no,
-				"dispatch_reference": scan_log.dispatch_reference,
-				"reason": f"Damaged item (QR readable) - Returned via {doc.name}",
-				"return_reference": doc.name,
-				"return_date": doc.date,
-				"destroyed_by": frappe.session.user,
-				"destruction_time": now_datetime()
-			}).insert(ignore_permissions=True)
-
-			frappe.msgprint(f"QR Code <b>{qr_code}</b> marked as Destroyed due to damaged return.")
-		else:
-			# Normal return
-			frappe.db.set_value("Scan Log", scan_log_name, {
-				"status": "Returned",
-				"return_reference": doc.name,
-				"return_date": doc.date
-			})
+		# Normal return - always mark as returned
+		frappe.db.set_value("Scan Log", scan_log_name, {
+			"status": "Returned",
+			"return_reference": doc.name,
+			"return_date": doc.date
+		})
 
 	# --- 2. Handle invalid_items (unreadable or too damaged QR codes) - DEBUG VERSION
 	if hasattr(doc, 'invalid_items'):
@@ -77,47 +43,52 @@ def on_submit_delivery_return(doc, method):
 		for i, invalid in enumerate(doc.invalid_items):
 			frappe.msgprint(f"--- Processing invalid item {i+1} ---")
 			
+			# Debug: Show available fields in the child table
+			frappe.msgprint(f"🔍 Child table fields: {list(invalid.__dict__.keys())}")
+			
 			# Step 1: Check delivery_note
-			if not invalid.delivery_note:
+			delivery_note = getattr(invalid, 'delivery_note', None)
+			if not delivery_note:
 				frappe.msgprint(f"❌ Missing Delivery Note for invalid item {i+1}. Skipping.")
 				continue
 			
-			frappe.msgprint(f"✓ Delivery Note: {invalid.delivery_note}")
+			frappe.msgprint(f"✓ Delivery Note: {delivery_note}")
 			
 			# Step 2: Get dispatch_sheet
-			dispatch_sheet = frappe.db.get_value("Delivery Note", invalid.delivery_note, "custom_dispatch_sheet")
+			dispatch_sheet = frappe.db.get_value("Delivery Note", delivery_note, "custom_dispatch_sheet")
 			
 			if not dispatch_sheet:
-				frappe.msgprint(f"❌ No Dispatch Sheet linked to Delivery Note {invalid.delivery_note}. Skipping.")
+				frappe.msgprint(f"❌ No Dispatch Sheet linked to Delivery Note {delivery_note}. Skipping.")
 				continue
 			
 			frappe.msgprint(f"✓ Dispatch Sheet: {dispatch_sheet}")
 			
 			# Step 3: Try getting item_code + batch_no from existing QR (if present)
 			item_code, batch_no = None, None
-			if invalid.qr_code:
-				frappe.msgprint(f"🔍 Checking existing QR: {invalid.qr_code.strip()}")
-				existing = frappe.db.get_value("Scan Log", {"qr_code": invalid.qr_code.strip()}, ["item_code", "batch_no"], as_dict=True)
+			qr_code = getattr(invalid, 'qr_code', None)
+			if qr_code:
+				frappe.msgprint(f"🔍 Checking existing QR: {qr_code.strip()}")
+				existing = frappe.db.get_value("Scan Log", {"qr_code": qr_code.strip()}, ["item_code", "batch_no"], as_dict=True)
 				if existing:
 					item_code = existing.item_code
 					batch_no = existing.batch_no
 					frappe.msgprint(f"✓ From QR - Item: {item_code}, Batch: {batch_no}")
 				else:
-					frappe.msgprint(f"❌ No Scan Log found for QR: {invalid.qr_code.strip()}")
+					frappe.msgprint(f"❌ No Scan Log found for QR: {qr_code.strip()}")
 			
 			# Step 4: If not from QR, fallback: get from Delivery Note Item
 			if not item_code or not batch_no:
 				frappe.msgprint("🔍 Trying to get item_code/batch_no from Delivery Note Item...")
-				dn_item = frappe.db.get_value("Delivery Note Item", {"parent": invalid.delivery_note}, ["item_code", "batch_no"], as_dict=True)
+				dn_item = frappe.db.get_value("Delivery Note Item", {"parent": delivery_note}, ["item_code", "batch_no"], as_dict=True)
 				if dn_item:
 					item_code = dn_item.item_code
 					batch_no = dn_item.batch_no
 					frappe.msgprint(f"✓ From DN Item - Item: {item_code}, Batch: {batch_no}")
 				else:
-					frappe.msgprint(f"❌ No Delivery Note Item found for DN: {invalid.delivery_note}")
+					frappe.msgprint(f"❌ No Delivery Note Item found for DN: {delivery_note}")
 			
 			if not item_code or not batch_no:
-				frappe.msgprint(f"❌ Could not determine item_code or batch_no for invalid return from {invalid.delivery_note}. Skipping.")
+				frappe.msgprint(f"❌ Could not determine item_code or batch_no for invalid return from {delivery_note}. Skipping.")
 				continue
 			
 			# Step 5: Find a dispatched QR code from that batch
@@ -208,8 +179,9 @@ def on_submit_delivery_return(doc, method):
 				frappe.msgprint(f"❌ Error creating Destruction Log: {str(e)}")
 			
 			# Step 8: Create new Scan Log if replacement QR code is provided
-			if invalid.replacement_qr_code:
-				replacement_qr = invalid.replacement_qr_code.strip()
+			replacement_qr_code = getattr(invalid, 'replacement_qr_code', None)
+			if replacement_qr_code:
+				replacement_qr = replacement_qr_code.strip()
 				frappe.msgprint(f"🔄 Creating replacement QR: {replacement_qr}")
 				
 				if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
