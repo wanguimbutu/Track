@@ -59,7 +59,7 @@ def on_submit_delivery_return(doc, method):
 					"dispatch_reference": dispatch_sheet,
 					"status": "Dispatched"
 				},
-				["name", "qr_code", "item_code", "dispatch_date", "creation_time", "created_by"],
+				["name", "qr_code", "item_code", "dispatch_date"],
 				as_dict=True
 			)
 
@@ -123,9 +123,6 @@ def on_submit_delivery_return(doc, method):
 						"return_date": doc.date,
 						"dispatch_reference": dispatch_sheet,
 						"dispatch_date": dispatched_log.dispatch_date,
-						"creation_time": now_datetime(),
-						"created_by": frappe.session.user,
-						"scan_time": now_datetime(),
 						"comments": f"Replacement QR for destroyed {dispatched_log.qr_code} via {doc.name}"
 					})
 					
@@ -180,9 +177,6 @@ def create_replacement_qrs(doc_name, replacement_data):
 					"return_date": doc.date,
 					"dispatch_reference": data['dispatch_sheet'],
 					"dispatch_date": data['dispatch_date'],
-					#"creation_time": now_datetime(),
-					#"created_by": frappe.session.user,
-					#"scan_time": now_datetime(),
 					"comments": f"Replacement QR for destroyed {data['original_qr']} via {doc_name}"
 				})
 				
