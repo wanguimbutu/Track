@@ -180,9 +180,9 @@ def create_replacement_qrs(doc_name, replacement_data):
 					"return_date": doc.date,
 					"dispatch_reference": data['dispatch_sheet'],
 					"dispatch_date": data['dispatch_date'],
-					"creation_time": now_datetime(),
-					"created_by": frappe.session.user,
-					"scan_time": now_datetime(),
+					#"creation_time": now_datetime(),
+					#"created_by": frappe.session.user,
+					#"scan_time": now_datetime(),
 					"comments": f"Replacement QR for destroyed {data['original_qr']} via {doc_name}"
 				})
 				
