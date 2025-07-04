@@ -11,10 +11,9 @@ class DeliveryReturn(Document):
 def on_submit_delivery_return(doc, method):
 	"""
 	On Submit of Delivery Return:
-	- Update returned QR codes
-	- Handle damaged or unreadable QR returns
-	- Mark as Destroyed if needed and log in Destruction Log
-	- Create replacement Scan Logs using replacement_qr_code field
+	- Mark returned QR codes as Returned
+	- For invalid_items, destroy the original QR (if found)
+	- Create replacement QR code if provided
 	"""
 
 	# --- 1. Process normal returned_items
@@ -29,187 +28,102 @@ def on_submit_delivery_return(doc, method):
 			frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
 			continue
 
-		# Normal return - always mark as returned
+		# Mark as returned
 		frappe.db.set_value("Scan Log", scan_log_name, {
 			"status": "Returned",
 			"return_reference": doc.name,
 			"return_date": doc.date
 		})
 
-	# --- 2. Handle invalid_items (unreadable or too damaged QR codes) - DEBUG VERSION
+	# --- 2. Process invalid_items (damaged/unreadable)
 	if hasattr(doc, 'invalid_items'):
-		frappe.msgprint(f"✓ Found invalid_items field with {len(doc.invalid_items)} items")
-		
+		frappe.msgprint(f"🟡 Found {len(doc.invalid_items)} invalid item(s)")
+
 		for i, invalid in enumerate(doc.invalid_items):
-			frappe.msgprint(f"--- Processing invalid item {i+1} ---")
-			
-			# Debug: Show available fields in the child table
-			frappe.msgprint(f"🔍 Child table fields: {list(invalid.__dict__.keys())}")
-			
-			# Step 1: Check delivery_note
+			frappe.msgprint(f"🔁 Processing invalid item {i+1}")
+
 			delivery_note = getattr(invalid, 'delivery_note', None)
 			if not delivery_note:
-				frappe.msgprint(f"❌ Missing Delivery Note for invalid item {i+1}. Skipping.")
+				frappe.msgprint(f"❌ Missing Delivery Note in invalid item {i+1}. Skipping.")
 				continue
-			
-			frappe.msgprint(f"✓ Delivery Note: {delivery_note}")
-			
-			# Step 2: Get dispatch_sheet
+
 			dispatch_sheet = frappe.db.get_value("Delivery Note", delivery_note, "custom_dispatch_sheet")
-			
 			if not dispatch_sheet:
-				frappe.msgprint(f"❌ No Dispatch Sheet linked to Delivery Note {delivery_note}. Skipping.")
+				frappe.msgprint(f"❌ No Dispatch Sheet for Delivery Note {delivery_note}. Skipping.")
 				continue
-			
-			frappe.msgprint(f"✓ Dispatch Sheet: {dispatch_sheet}")
-			
-			# Step 3: Try getting item_code + batch_no from existing QR (if present)
-			item_code, batch_no = None, None
-			qr_code = getattr(invalid, 'qr_code', None)
-			if qr_code:
-				frappe.msgprint(f"🔍 Checking existing QR: {qr_code.strip()}")
-				existing = frappe.db.get_value("Scan Log", {"qr_code": qr_code.strip()}, ["item_code", "batch_no"], as_dict=True)
-				if existing:
-					item_code = existing.item_code
-					batch_no = existing.batch_no
-					frappe.msgprint(f"✓ From QR - Item: {item_code}, Batch: {batch_no}")
-				else:
-					frappe.msgprint(f"❌ No Scan Log found for QR: {qr_code.strip()}")
-			
-			# Step 4: If not from QR, fallback: get from Delivery Note Item
-			if not item_code or not batch_no:
-				frappe.msgprint("🔍 Trying to get item_code/batch_no from Delivery Note Item...")
-				dn_item = frappe.db.get_value("Delivery Note Item", {"parent": delivery_note}, ["item_code", "batch_no"], as_dict=True)
-				if dn_item:
-					item_code = dn_item.item_code
-					batch_no = dn_item.batch_no
-					frappe.msgprint(f"✓ From DN Item - Item: {item_code}, Batch: {batch_no}")
-				else:
-					frappe.msgprint(f"❌ No Delivery Note Item found for DN: {delivery_note}")
-			
-			if not item_code or not batch_no:
-				frappe.msgprint(f"❌ Could not determine item_code or batch_no for invalid return from {delivery_note}. Skipping.")
-				continue
-			
-			# Step 5: Find a dispatched QR code from that batch
-			frappe.msgprint(f"🔍 Looking for dispatched QR code with:")
-			frappe.msgprint(f"   - dispatch_reference: {dispatch_sheet}")
-			frappe.msgprint(f"   - item_code: {item_code}")
-			frappe.msgprint(f"   - batch_no: {batch_no}")
-			frappe.msgprint(f"   - status: Dispatched")
-			
-			# First, let's see what scan logs exist for this dispatch sheet
-			all_logs = frappe.db.get_all("Scan Log", 
-				filters={"dispatch_reference": dispatch_sheet},
-				fields=["name", "qr_code", "item_code", "batch_no", "status"]
-			)
-			
-			frappe.msgprint(f"📋 Found {len(all_logs)} total scan logs for dispatch sheet {dispatch_sheet}")
-			for log in all_logs:
-				frappe.msgprint(f"   - QR: {log.qr_code}, Item: {log.item_code}, Batch: {log.batch_no}, Status: {log.status}")
-			
+
+			# Look for any dispatched QR under the same dispatch reference
 			dispatched_log = frappe.db.get_value(
 				"Scan Log",
 				{
 					"dispatch_reference": dispatch_sheet,
-					"item_code": item_code,
-					"batch_no": batch_no,
 					"status": "Dispatched"
 				},
-				["name", "qr_code"],
+				["name", "qr_code", "item_code"],
 				as_dict=True
 			)
-			
+
 			if not dispatched_log:
-				frappe.msgprint(f"❌ No dispatched QR code found for Dispatch Sheet {dispatch_sheet}, Item {item_code}, Batch {batch_no}.")
-				
-				# Try without status filter to see if there are any logs
-				any_log = frappe.db.get_value(
-					"Scan Log",
-					{
-						"dispatch_reference": dispatch_sheet,
-						"item_code": item_code,
-						"batch_no": batch_no
-					},
-					["name", "qr_code", "status"],
-					as_dict=True
-				)
-				
-				if any_log:
-					frappe.msgprint(f"💡 Found log with different status: {any_log.qr_code} (Status: {any_log.status})")
-				else:
-					frappe.msgprint(f"💡 No logs found at all for this combination")
-				
+				frappe.msgprint(f"❌ No dispatched QR found for Dispatch Sheet: {dispatch_sheet}. Skipping.")
 				continue
-			
-			frappe.msgprint(f"✓ Found dispatched log: {dispatched_log.qr_code}")
-			
-			# Step 6: Mark as destroyed
-			destruction_comment = f"Unsalvageable and unreadable QR - Returned via {doc.name}"
-			frappe.msgprint(f"🔄 Marking {dispatched_log.qr_code} as destroyed...")
-			
+
+			# Step 1: Mark old QR as Destroyed
 			try:
 				frappe.db.set_value("Scan Log", dispatched_log.name, {
 					"status": "Destroyed",
 					"return_reference": doc.name,
 					"return_date": doc.date,
-					"comments": destruction_comment
+					"comments": f"Unreadable QR returned via {doc.name}"
 				})
-				frappe.msgprint(f"✓ Marked as destroyed")
+				frappe.msgprint(f"✅ Marked old QR ({dispatched_log.qr_code}) as Destroyed.")
 			except Exception as e:
-				frappe.msgprint(f"❌ Error marking as destroyed: {str(e)}")
+				frappe.msgprint(f"❌ Error marking QR as destroyed: {e}")
 				continue
-			
-			# Step 7: Log to Destruction Log
+
+			# Step 2: Create Destruction Log
 			try:
 				frappe.get_doc({
 					"doctype": "Destruction Log",
 					"qr_code": dispatched_log.qr_code,
-					"item_code": item_code,
-					"batch_no": batch_no,
+					"item_code": dispatched_log.item_code,
 					"dispatch_reference": dispatch_sheet,
-					"reason": destruction_comment,
+					"reason": f"Unreadable QR returned via {doc.name}",
 					"return_reference": doc.name,
 					"return_date": doc.date,
 					"destroyed_by": frappe.session.user,
 					"destruction_time": now_datetime()
 				}).insert(ignore_permissions=True)
-				frappe.msgprint(f"✓ Created Destruction Log entry")
+				frappe.msgprint("✅ Destruction Log created.")
 			except Exception as e:
-				frappe.msgprint(f"❌ Error creating Destruction Log: {str(e)}")
-			
-			# Step 8: Create new Scan Log if replacement QR code is provided
+				frappe.msgprint(f"❌ Error creating Destruction Log: {e}")
+
+			# Step 3: If replacement QR code is given
 			replacement_qr_code = getattr(invalid, 'replacement_qr_code', None)
 			if replacement_qr_code:
 				replacement_qr = replacement_qr_code.strip()
-				frappe.msgprint(f"🔄 Creating replacement QR: {replacement_qr}")
-				
 				if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
-					frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} already exists in Scan Log.")
+					frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} already exists.")
 					continue
-				
+
 				try:
 					frappe.get_doc({
 						"doctype": "Scan Log",
 						"qr_code": replacement_qr,
-						"item_code": item_code,
-						"batch_no": batch_no,
+						"item_code": dispatched_log.item_code,
 						"status": "Returned",
 						"return_reference": doc.name,
 						"return_date": doc.date,
 						"dispatch_reference": dispatch_sheet
 					}).insert(ignore_permissions=True)
-					
-					frappe.msgprint(f"✓ Replacement QR Code <b>{replacement_qr}</b> created and marked as Returned.")
+					frappe.msgprint(f"✅ Replacement QR Code {replacement_qr} created and marked as Returned.")
 				except Exception as e:
-					frappe.msgprint(f"❌ Error creating replacement QR: {str(e)}")
+					frappe.msgprint(f"❌ Error creating replacement QR Code {replacement_qr}: {e}")
 			else:
-				frappe.msgprint(f"✓ QR Code <b>{dispatched_log.qr_code}</b> marked as Destroyed (unreadable, no replacement).")
-			
-			frappe.msgprint(f"--- Completed invalid item {i+1} ---")
+				frappe.msgprint(f"ℹ️ No replacement QR Code provided. Only original was destroyed.")
+
 	else:
-		frappe.msgprint("❌ No invalid_items field found on document")
-		
+		frappe.msgprint("⚠️ No invalid_items field found on the document.")
+
 def validate_returned_qr_codes(doc, method):
 	"""
 	On Save of Delivery Return:
