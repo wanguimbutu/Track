@@ -151,128 +151,210 @@ def validate_returned_qr_codes(doc, method):
 	if invalid_qrs:
 		frappe.throw(f"The following QR codes are not marked as 'Dispatched':<br><b>{', '.join(invalid_qrs)}</b>")
 
-def create_inward_sbb(item_code, batch_no=None, serial_nos=None):
-	if not item_code:
-		return None
-	doc = frappe.get_doc({
-		"doctype": "Serial and Batch Bundle",
-		"item_code": item_code,
-		"batch_no": batch_no,
-		"serial_nos": "\n".join(serial_nos or []),
-		"type_of_transaction": "Inward"
-	})
-	doc.insert(ignore_permissions=True)
-	return doc.name
 
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
-	try:
-		delivery_return = frappe.get_doc("Delivery Return", docname)
-		if not delivery_return.returned_items:
-			frappe.throw("No returned items found in Delivery Return")
+    """
+    Create Delivery Note Returns manually without relying on get_return_doc.
+    This approach is more reliable across different ERPNext versions.
+    """
+    try:
+        delivery_return = frappe.get_doc("Delivery Return", docname)
+        
+        if not delivery_return.returned_items:
+            frappe.throw("No returned items found in Delivery Return")
+            
+        created_notes = []
 
-		created_notes = []
-		deliveries = {}
+        # Group items by delivery note and item_code
+        deliveries = {}
+        for row in delivery_return.returned_items:
+            if not row.delivery_note:
+                frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
+                
+            delivery_note = row.delivery_note
+            if delivery_note not in deliveries:
+                deliveries[delivery_note] = {}
+            
+            # Group by item_code to aggregate quantities
+            item_code = row.item_code
+            if item_code not in deliveries[delivery_note]:
+                deliveries[delivery_note][item_code] = {
+                    'qty': 0,
+                    'qr_codes': []
+                }
+            
+            deliveries[delivery_note][item_code]['qty'] += 1  # Each QR = 1 qty
+            deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
 
-		for row in delivery_return.returned_items:
-			if not row.delivery_note:
-				frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
-			dn = row.delivery_note
-			if dn not in deliveries:
-				deliveries[dn] = {}
-			item_code = row.item_code
-			if item_code not in deliveries[dn]:
-				deliveries[dn][item_code] = {
-					'qty': 0,
-					'qr_codes': []
-				}
-			deliveries[dn][item_code]['qty'] += 1
-			deliveries[dn][item_code]['qr_codes'].append(row.qr_code)
+        # Create return documents for each delivery note
+        for dn_name, items_data in deliveries.items():
+            try:
+                # Get original delivery note
+                original_dn = frappe.get_doc("Delivery Note", dn_name)
+                if original_dn.docstatus != 1:
+                    frappe.throw(f"Delivery Note {dn_name} is not submitted")
+                
+                # Create return delivery note manually
+                return_doc = frappe.new_doc("Delivery Note")
+                
+                # Copy basic information from original
+                return_doc.customer = original_dn.customer
+                return_doc.company = original_dn.company
+                return_doc.posting_date = delivery_return.date or today()
+                return_doc.posting_time = nowtime()
+                
+                # Set return flags
+                return_doc.is_return = 1
+                return_doc.return_against = dn_name
+                
+                # Copy delivery-related fields to avoid validation errors
+                if hasattr(original_dn, 'vehicle_no') and original_dn.vehicle_no:
+                    return_doc.vehicle_no = original_dn.vehicle_no
+                if hasattr(original_dn, 'driver_name') and original_dn.driver_name:
+                    return_doc.driver_name = original_dn.driver_name
+                if hasattr(original_dn, 'driver') and original_dn.driver:
+                    return_doc.driver = original_dn.driver
+                if hasattr(original_dn, 'transporter') and original_dn.transporter:
+                    return_doc.transporter = original_dn.transporter
+                if hasattr(original_dn, 'transporter_name') and original_dn.transporter_name:
+                    return_doc.transporter_name = original_dn.transporter_name
+                if hasattr(original_dn, 'lr_no') and original_dn.lr_no:
+                    return_doc.lr_no = original_dn.lr_no
+                if hasattr(original_dn, 'lr_date') and original_dn.lr_date:
+                    return_doc.lr_date = original_dn.lr_date
+                
+                # Copy other essential fields
+                fields_to_copy = [
+                    'currency', 'conversion_rate', 'selling_price_list',
+                    'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
+                    'set_warehouse', 'target_warehouse', 'tc_name', 'terms',
+                    'customer_address', 'shipping_address_name', 'contact_person',
+                    'territory', 'sales_team'
+                ]
+                
+                for field in fields_to_copy:
+                    if hasattr(original_dn, field) and getattr(original_dn, field):
+                        setattr(return_doc, field, getattr(original_dn, field))
+                
+                # Add items based on what's being returned
+                for item_code, item_data in items_data.items():
+                    # Find the original item in the delivery note
+                    original_item = None
+                    for item in original_dn.items:
+                        if item.item_code == item_code:
+                            original_item = item
+                            break
+                    
+                    if not original_item:
+                        frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
+                    
+                    serial_batch_bundle = None
+                    if original_item.serial_and_batch_bundle:
+                        serial_batch_bundle = create_inward_serial_batch_bundle(
+                            return_doc, original_item, item_code, item_data['qty']
+                        )
+                    # Add return item with negative quantity for returns
+                    return_doc.append("items", {
+                        "item_code": item_code,
+                        "item_name": original_item.item_name,
+                        "description": original_item.description,
+                        "qty": -abs(item_data['qty']),  # Negative quantity for returns
+                        "uom": original_item.uom,
+                        "rate": original_item.rate,
+                        "warehouse": original_item.warehouse,
+                        "expense_account": getattr(original_item, 'expense_account', None),
+                        "cost_center": getattr(original_item, 'cost_center', None),
+                        "against_delivery_note": dn_name,
+                        "dn_detail": original_item.name,
+                        "against_sales_order": getattr(original_item, 'against_sales_order', None),
+                        "so_detail": getattr(original_item, 'so_detail', None),
+                        "serial_and_batch_bundle": serial_batch_bundle
+                    })
+                    def create_inward_serial_batch_bundle(return_doc, original_item, item_code, qty):
+                        """Create inward serial and batch bundle for returns using same batches/serials from original"""
+                        if not original_item.serial_and_batch_bundle:
+                            return None
+                        
+                        try:
+                            # Get the original bundle
+                            original_bundle = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
+                            
+                            # Create new bundle for inward transaction
+                            new_bundle = frappe.new_doc("Serial and Batch Bundle")
+                            new_bundle.item_code = item_code
+                            new_bundle.warehouse = original_item.warehouse
+                            new_bundle.type_of_transaction = "Inward"  # Key change: Inward for returns
+                            new_bundle.company = return_doc.company
+                            new_bundle.voucher_type = "Delivery Note"
+                            new_bundle.voucher_no = return_doc.name
+                            new_bundle.posting_date = return_doc.posting_date
+                            new_bundle.posting_time = return_doc.posting_time
+                            
+                            # Copy entries from original bundle but make them inward
+                            total_returned = 0
+                            for entry in original_bundle.entries:
+                                if total_returned >= qty:
+                                    break
+                                    
+                                returned_qty = min(abs(entry.qty), qty - total_returned)
+                                
+                                new_bundle.append("entries", {
+                                    "serial_no": entry.serial_no,
+                                    "batch_no": entry.batch_no,
+                                    "qty": returned_qty,  # Positive qty for inward
+                                    "warehouse": entry.warehouse,
+                                    "incoming_rate": getattr(entry, 'incoming_rate', 0)
+                                })
+                                
+                                total_returned += returned_qty
+                            
+                            new_bundle.insert(ignore_permissions=True)
+                            return new_bundle.name
+        
+                        except Exception as e:
+                            frappe.log_error(f"Error creating inward serial batch bundle: {str(e)}", "Serial Batch Bundle Creation")
+                            return None
+                
+                # Add custom QR codes tracking
+                if hasattr(return_doc, 'custom_returned_qr_codes'):
+                    for item_code, item_data in items_data.items():
+                        for qr_code in item_data['qr_codes']:
+                            return_doc.append("custom_returned_qr_codes", {
+                                "qr_code": qr_code,
+                                "qr_return_reference": delivery_return.name
+                            })
+                
+                # Set ignore validation flags to bypass some checks during insert
+                return_doc.flags.ignore_validate_update_after_submit = True
+                return_doc.flags.ignore_permissions = True
+                
+                # Save the return document
+                return_doc.insert(ignore_permissions=True)
+                
+                # Submit if auto-submit is enabled
+                if delivery_return.get('auto_submit_returns'):
+                    return_doc.submit()
+                
+                created_notes.append(return_doc.name)
+                
+            except Exception as e:
+                error_msg = str(e)
+                frappe.log_error(f"Error creating return for {dn_name}: {error_msg}", "Delivery Return Creation Error")
+                # More specific error handling
+                if "vehicle_no" in error_msg or "driver_name" in error_msg:
+                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: Missing required delivery fields (vehicle_no, driver_name). Please ensure the original delivery note has these fields filled.")
+                else:
+                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: {error_msg}")
 
-		for dn_name, items_data in deliveries.items():
-			try:
-				original_dn = frappe.get_doc("Delivery Note", dn_name)
-				if original_dn.docstatus != 1:
-					frappe.throw(f"Delivery Note {dn_name} is not submitted")
-
-				return_doc = frappe.new_doc("Delivery Note")
-				return_doc.customer = original_dn.customer
-				return_doc.company = original_dn.company
-				return_doc.posting_date = delivery_return.date or today()
-				return_doc.posting_time = nowtime()
-				return_doc.is_return = 1
-				return_doc.return_against = dn_name
-
-				for field in [
-					'vehicle_no', 'driver_name', 'driver', 'transporter',
-					'transporter_name', 'lr_no', 'lr_date', 'currency', 'conversion_rate',
-					'selling_price_list', 'price_list_currency', 'plc_conversion_rate',
-					'ignore_pricing_rule', 'set_warehouse', 'target_warehouse', 'tc_name',
-					'terms', 'customer_address', 'shipping_address_name', 'contact_person',
-					'territory', 'sales_team'
-				]:
-					if hasattr(original_dn, field) and getattr(original_dn, field):
-						setattr(return_doc, field, getattr(original_dn, field))
-
-				for item_code, item_data in items_data.items():
-					original_item = next((item for item in original_dn.items if item.item_code == item_code), None)
-					if not original_item:
-						frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
-
-					new_sbb = None
-					if getattr(original_item, 'serial_and_batch_bundle', None):
-						sbb = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
-						if sbb.type_of_transaction == "Outward":
-							new_sbb = create_inward_sbb(
-								item_code=item_code,
-								batch_no=sbb.batch_no,
-								serial_nos=sbb.serial_nos.split("\n") if sbb.serial_nos else []
-							)
-
-					return_doc.append("items", {
-						"item_code": item_code,
-						"item_name": original_item.item_name,
-						"description": original_item.description,
-						"qty": -abs(item_data['qty']),
-						"uom": original_item.uom,
-						"rate": original_item.rate,
-						"warehouse": original_item.warehouse,
-						"expense_account": getattr(original_item, 'expense_account', None),
-						"cost_center": getattr(original_item, 'cost_center', None),
-						"against_delivery_note": dn_name,
-						"dn_detail": original_item.name,
-						"against_sales_order": getattr(original_item, 'against_sales_order', None),
-						"so_detail": getattr(original_item, 'so_detail', None),
-						"serial_and_batch_bundle": new_sbb
-					})
-
-				if hasattr(return_doc, 'custom_returned_qr_codes'):
-					for item_code, item_data in items_data.items():
-						for qr_code in item_data['qr_codes']:
-							return_doc.append("custom_returned_qr_codes", {
-								"qr_code": qr_code,
-								"qr_return_reference": delivery_return.name
-							})
-
-				return_doc.flags.ignore_validate_update_after_submit = True
-				return_doc.flags.ignore_permissions = True
-				return_doc.insert(ignore_permissions=True)
-
-				if delivery_return.get('auto_submit_returns'):
-					return_doc.submit()
-
-				created_notes.append(return_doc.name)
-
-			except Exception as e:
-				frappe.log_error(str(e), "Delivery Return Creation Error")
-				frappe.throw(f"Error creating return for Delivery Note {dn_name}: {e}")
-
-		if created_notes:
-			frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
-		else:
-			frappe.msgprint("No Delivery Note Returns were created")
-		return created_notes
-
-	except Exception as e:
-		frappe.log_error(str(e), "Delivery Return Function Error")
-		frappe.throw(f"Error creating delivery note returns: {e}")
+        if created_notes:
+            frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
+        else:
+            frappe.msgprint("No Delivery Note Returns were created")
+            
+        return created_notes
+        
+    except Exception as e:
+        error_msg = str(e)
+        frappe.log_error(f"Error in create_delivery_note_returns: {error_msg}", "Delivery Return Function Error")
+        frappe.throw(f"Error creating delivery note returns: {error_msg}")
