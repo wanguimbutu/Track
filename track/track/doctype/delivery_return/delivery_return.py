@@ -59,7 +59,7 @@ def on_submit_delivery_return(doc, method):
 					"dispatch_reference": dispatch_sheet,
 					"status": "Dispatched"
 				},
-				["name", "qr_code", "item_code"],
+				["name", "qr_code", "item_code", "dispatch_date", "creation_time", "created_by"],
 				as_dict=True
 			)
 
@@ -107,6 +107,9 @@ def on_submit_delivery_return(doc, method):
 					frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} already exists.")
 					continue
 
+				# Commit the transaction to ensure the Delivery Return document is saved
+				frappe.db.commit()
+
 				try:
 					frappe.msgprint(f"🔄 Creating replacement QR: {replacement_qr}")
 					
@@ -119,22 +122,20 @@ def on_submit_delivery_return(doc, method):
 						"return_reference": doc.name,
 						"return_date": doc.date,
 						"dispatch_reference": dispatch_sheet,
-						"dispatch_date": frappe.db.get_value("Scan Log", dispatched_log.name, "dispatch_date"),
-						#"dispatch_time": frappe.db.get_value("Scan Log", dispatched_log.name, "dispatch_time"),
-						#"created_by": frappe.session.user,
-						#"creation_time": now_datetime(),
+						"dispatch_date": dispatched_log.dispatch_date,
+						"creation_time": now_datetime(),
+						"created_by": frappe.session.user,
+						"scan_time": now_datetime(),
 						"comments": f"Replacement QR for destroyed {dispatched_log.qr_code} via {doc.name}"
 					})
 					
-					frappe.msgprint(f"🔄 Inserting replacement QR document...")
-					
-					# Insert without permissions and validation issues
+					# Set flags to bypass validation issues
 					replacement_doc.flags.ignore_permissions = True
 					replacement_doc.flags.ignore_validate = True
-					replacement_doc.insert(ignore_permissions=True)
+					replacement_doc.flags.ignore_mandatory = True
 					
-					# Commit the transaction to ensure it's saved
-					frappe.db.commit()
+					# Insert the document
+					replacement_doc.insert(ignore_permissions=True)
 					
 					# Verify it was created
 					if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
@@ -155,8 +156,60 @@ def on_submit_delivery_return(doc, method):
 
 	else:
 		frappe.msgprint("⚠️ No invalid_items field found on the document.")
-		frappe.msgprint(f"ℹ️ No replacement QR Code provided for invalid item {i+1}. Only original was destroyed.")
 
+def create_replacement_qrs(doc_name, replacement_data):
+	"""
+	Create replacement QR codes after the Delivery Return document is fully submitted.
+	This function is called via enqueue to avoid validation issues during submit.
+	"""
+	try:
+		# Get the submitted document to ensure it exists
+		doc = frappe.get_doc("Delivery Return", doc_name)
+		
+		for data in replacement_data:
+			try:
+				frappe.msgprint(f"🔄 Creating replacement QR: {data['replacement_qr']}")
+				
+				# Create replacement QR code with same details as destroyed QR
+				replacement_doc = frappe.get_doc({
+					"doctype": "Scan Log",
+					"qr_code": data['replacement_qr'],
+					"item_code": data['item_code'],
+					"status": "Returned",
+					"return_reference": doc_name,
+					"return_date": doc.date,
+					"dispatch_reference": data['dispatch_sheet'],
+					"dispatch_date": data['dispatch_date'],
+					"creation_time": now_datetime(),
+					"created_by": frappe.session.user,
+					"scan_time": now_datetime(),
+					"comments": f"Replacement QR for destroyed {data['original_qr']} via {doc_name}"
+				})
+				
+				# Set flags to bypass validation issues
+				replacement_doc.flags.ignore_permissions = True
+				replacement_doc.flags.ignore_validate = True
+				replacement_doc.flags.ignore_mandatory = True
+				
+				# Insert the document
+				replacement_doc.insert(ignore_permissions=True)
+				
+				# Verify it was created
+				if frappe.db.exists("Scan Log", {"qr_code": data['replacement_qr']}):
+					frappe.msgprint(f"✅ Replacement QR Code {data['replacement_qr']} created and marked as Returned.")
+				else:
+					frappe.msgprint(f"❌ Replacement QR Code {data['replacement_qr']} was not created successfully.")
+				
+			except Exception as e:
+				error_msg = str(e)
+				frappe.log_error(f"Error creating replacement QR Code {data['replacement_qr']}: {error_msg}", "Replacement QR Creation Error")
+				frappe.msgprint(f"❌ Error creating replacement QR Code {data['replacement_qr']}: {error_msg}")
+		
+		frappe.db.commit()
+		
+	except Exception as e:
+		frappe.log_error(f"Error in create_replacement_qrs for {doc_name}: {str(e)}", "Replacement QR Background Job Error")
+            
 def validate_returned_qr_codes(doc, method):
 	"""
 	On Save of Delivery Return:
