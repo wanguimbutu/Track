@@ -222,7 +222,7 @@ def create_delivery_note_returns(docname):
 					new_sbb = None
 					if getattr(original_item, 'serial_and_batch_bundle', None):
 						sbb = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
-						if sbb.transaction_type == "Outward":
+						if sbb.type_of_transaction == "Outward":
 							new_sbb = create_inward_sbb(
 								item_code=item_code,
 								batch_no=sbb.batch_no,
