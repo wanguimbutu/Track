@@ -120,9 +120,9 @@ def on_submit_delivery_return(doc, method):
 						"return_date": doc.date,
 						"dispatch_reference": dispatch_sheet,
 						"dispatch_date": frappe.db.get_value("Scan Log", dispatched_log.name, "dispatch_date"),
-						"dispatch_time": frappe.db.get_value("Scan Log", dispatched_log.name, "dispatch_time"),
-						"created_by": frappe.session.user,
-						"creation_time": now_datetime(),
+						#"dispatch_time": frappe.db.get_value("Scan Log", dispatched_log.name, "dispatch_time"),
+						#"created_by": frappe.session.user,
+						#"creation_time": now_datetime(),
 						"comments": f"Replacement QR for destroyed {dispatched_log.qr_code} via {doc.name}"
 					})
 					
