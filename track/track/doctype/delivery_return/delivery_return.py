@@ -11,26 +11,12 @@ class DeliveryReturn(Document):
 def on_submit_delivery_return(doc, method):
 	"""
 	On Submit of Delivery Return:
-	- Validate replacement_qr_codes don't already exist
-	- Update returned QR codes
-	- Handle damaged/unreadable returns
-	- Mark as Destroyed if needed and log
-	- Create replacement Scan Logs
+	- Mark returned QR codes as Returned
+	- For invalid_items, destroy the original QR (if found)
+	- Create replacement QR code if provided
 	"""
 
-	duplicate_codes = []
-	for invalid in getattr(doc, 'invalid_items', []):
-		replacement_qr = getattr(invalid, 'replacement_qr_code', None)
-		if replacement_qr and frappe.db.exists("Scan Log", {"qr_code": replacement_qr.strip()}):
-			duplicate_codes.append(replacement_qr.strip())
-
-	if duplicate_codes:
-		frappe.throw(
-			f"The following Replacement QR Code(s) already exist in Scan Log and must be unique:\n{', '.join(duplicate_codes)}",
-			title="Duplicate Replacement QR Codes"
-		)
-
-	# Process normal returned_items
+	# --- 1. Process normal returned_items
 	for row in doc.returned_items:
 		if not row.qr_code:
 			continue
@@ -42,102 +28,101 @@ def on_submit_delivery_return(doc, method):
 			frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
 			continue
 
+		# Mark as returned
 		frappe.db.set_value("Scan Log", scan_log_name, {
 			"status": "Returned",
 			"return_reference": doc.name,
 			"return_date": doc.date
 		})
 
-	# Handle invalid_items
+	# --- 2. Process invalid_items (damaged/unreadable)
 	if hasattr(doc, 'invalid_items'):
+		frappe.msgprint(f"🟡 Found {len(doc.invalid_items)} invalid item(s)")
+
 		for i, invalid in enumerate(doc.invalid_items):
+			frappe.msgprint(f"🔁 Processing invalid item {i+1}")
+
 			delivery_note = getattr(invalid, 'delivery_note', None)
 			if not delivery_note:
+				frappe.msgprint(f"❌ Missing Delivery Note in invalid item {i+1}. Skipping.")
 				continue
 
 			dispatch_sheet = frappe.db.get_value("Delivery Note", delivery_note, "custom_dispatch_sheet")
 			if not dispatch_sheet:
+				frappe.msgprint(f"❌ No Dispatch Sheet for Delivery Note {delivery_note}. Skipping.")
 				continue
 
-			item_code, batch_no = None, None
-			qr_code = getattr(invalid, 'qr_code', None)
-			if qr_code:
-				existing = frappe.db.get_value("Scan Log", {"qr_code": qr_code.strip()}, ["item_code", "batch_no"], as_dict=True)
-				if existing:
-					item_code = existing.item_code
-					batch_no = existing.batch_no
-
-			if not item_code or not batch_no:
-				dn_item = frappe.db.get_value("Delivery Note Item", {"parent": delivery_note}, ["item_code", "batch_no"], as_dict=True)
-				if dn_item:
-					item_code = dn_item.item_code
-					batch_no = dn_item.batch_no
-
-			if not item_code or not batch_no:
-				continue
-
+			# Look for any dispatched QR under the same dispatch reference
 			dispatched_log = frappe.db.get_value(
 				"Scan Log",
 				{
 					"dispatch_reference": dispatch_sheet,
-					"item_code": item_code,
-					"batch_no": batch_no,
 					"status": "Dispatched"
 				},
-				["name", "qr_code"],
+				["name", "qr_code", "item_code"],
 				as_dict=True
 			)
 
 			if not dispatched_log:
+				frappe.msgprint(f"❌ No dispatched QR found for Dispatch Sheet: {dispatch_sheet}. Skipping.")
 				continue
 
-			destruction_comment = f"Unsalvageable and unreadable QR - Returned via {doc.name}"
-
+			# Step 1: Mark old QR as Destroyed
 			try:
 				frappe.db.set_value("Scan Log", dispatched_log.name, {
 					"status": "Destroyed",
 					"return_reference": doc.name,
 					"return_date": doc.date,
-					"comments": destruction_comment
+					"comments": f"Unreadable QR returned via {doc.name}"
 				})
-			except Exception:
+				frappe.msgprint(f"✅ Marked old QR ({dispatched_log.qr_code}) as Destroyed.")
+			except Exception as e:
+				frappe.msgprint(f"❌ Error marking QR as destroyed: {e}")
 				continue
 
+			# Step 2: Create Destruction Log
 			try:
 				frappe.get_doc({
 					"doctype": "Destruction Log",
 					"qr_code": dispatched_log.qr_code,
-					"item_code": item_code,
-					"batch_no": batch_no,
+					"item_code": dispatched_log.item_code,
 					"dispatch_reference": dispatch_sheet,
-					"reason": destruction_comment,
+					"reason": f"Unreadable QR returned via {doc.name}",
 					"return_reference": doc.name,
 					"return_date": doc.date,
 					"destroyed_by": frappe.session.user,
 					"destruction_time": now_datetime()
 				}).insert(ignore_permissions=True)
-			except Exception:
-				pass
+				frappe.msgprint("✅ Destruction Log created.")
+			except Exception as e:
+				frappe.msgprint(f"❌ Error creating Destruction Log: {e}")
 
+			# Step 3: If replacement QR code is given
 			replacement_qr_code = getattr(invalid, 'replacement_qr_code', None)
 			if replacement_qr_code:
 				replacement_qr = replacement_qr_code.strip()
+				if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
+					frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} already exists.")
+					continue
 
 				try:
 					frappe.get_doc({
 						"doctype": "Scan Log",
 						"qr_code": replacement_qr,
-						"item_code": item_code,
-						"batch_no": batch_no,
+						"item_code": dispatched_log.item_code,
 						"status": "Returned",
 						"return_reference": doc.name,
 						"return_date": doc.date,
 						"dispatch_reference": dispatch_sheet
 					}).insert(ignore_permissions=True)
-				except Exception:
-					pass
+					frappe.msgprint(f"✅ Replacement QR Code {replacement_qr} created and marked as Returned.")
+				except Exception as e:
+					frappe.msgprint(f"❌ Error creating replacement QR Code {replacement_qr}: {e}")
+			else:
+				frappe.msgprint(f"ℹ️ No replacement QR Code provided. Only original was destroyed.")
+
 	else:
-		frappe.msgprint("No invalid_items field found on document")
+		frappe.msgprint("⚠️ No invalid_items field found on the document.")
 
 def validate_returned_qr_codes(doc, method):
 	"""
@@ -166,176 +151,128 @@ def validate_returned_qr_codes(doc, method):
 	if invalid_qrs:
 		frappe.throw(f"The following QR codes are not marked as 'Dispatched':<br><b>{', '.join(invalid_qrs)}</b>")
 
+def create_inward_sbb(item_code, batch_no=None, serial_nos=None):
+	if not item_code:
+		return None
+	doc = frappe.get_doc({
+		"doctype": "Serial and Batch Bundle",
+		"item_code": item_code,
+		"batch_no": batch_no,
+		"serial_nos": "\n".join(serial_nos or []),
+		"transaction_type": "Inward"
+	})
+	doc.insert(ignore_permissions=True)
+	return doc.name
 
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
-    """
-    Create Delivery Note Returns manually without relying on get_return_doc.
-    This approach is more reliable across different ERPNext versions.
-    """
-    try:
-        delivery_return = frappe.get_doc("Delivery Return", docname)
-        
-        if not delivery_return.returned_items:
-            frappe.throw("No returned items found in Delivery Return")
-            
-        created_notes = []
+	try:
+		delivery_return = frappe.get_doc("Delivery Return", docname)
+		if not delivery_return.returned_items:
+			frappe.throw("No returned items found in Delivery Return")
 
-        # Group items by delivery note and item_code
-        deliveries = {}
-        for row in delivery_return.returned_items:
-            if not row.delivery_note:
-                frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
-                
-            delivery_note = row.delivery_note
-            if delivery_note not in deliveries:
-                deliveries[delivery_note] = {}
-            
-            # Group by item_code to aggregate quantities
-            item_code = row.item_code
-            if item_code not in deliveries[delivery_note]:
-                deliveries[delivery_note][item_code] = {
-                    'qty': 0,
-                    'qr_codes': []
-                }
-            
-            deliveries[delivery_note][item_code]['qty'] += 1  # Each QR = 1 qty
-            deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
+		created_notes = []
+		deliveries = {}
 
-        for row in delivery_return.invalid_items:
-            dn = getattr(row, "delivery_note", None)
-            item = getattr(row, "item_code", None)
+		for row in delivery_return.returned_items:
+			if not row.delivery_note:
+				frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
+			dn = row.delivery_note
+			if dn not in deliveries:
+				deliveries[dn] = {}
+			item_code = row.item_code
+			if item_code not in deliveries[dn]:
+				deliveries[dn][item_code] = {
+					'qty': 0,
+					'qr_codes': []
+				}
+			deliveries[dn][item_code]['qty'] += 1
+			deliveries[dn][item_code]['qr_codes'].append(row.qr_code)
 
-            if not dn or not item:
-                frappe.msgprint("Skipping invalid item row: missing delivery_note or item_code.")
-                continue
+		for dn_name, items_data in deliveries.items():
+			try:
+				original_dn = frappe.get_doc("Delivery Note", dn_name)
+				if original_dn.docstatus != 1:
+					frappe.throw(f"Delivery Note {dn_name} is not submitted")
 
-            deliveries.setdefault(dn, {}).setdefault(item, {"qty": 0, "qr_codes": []})
-            deliveries[dn][item]["qty"] += 1
+				return_doc = frappe.new_doc("Delivery Note")
+				return_doc.customer = original_dn.customer
+				return_doc.company = original_dn.company
+				return_doc.posting_date = delivery_return.date or today()
+				return_doc.posting_time = nowtime()
+				return_doc.is_return = 1
+				return_doc.return_against = dn_name
 
-            qr_code = getattr(row, "qr_code", "").strip()
-            if qr_code:
-                deliveries[dn][item]["qr_codes"].append(qr_code)
+				for field in [
+					'vehicle_no', 'driver_name', 'driver', 'transporter',
+					'transporter_name', 'lr_no', 'lr_date', 'currency', 'conversion_rate',
+					'selling_price_list', 'price_list_currency', 'plc_conversion_rate',
+					'ignore_pricing_rule', 'set_warehouse', 'target_warehouse', 'tc_name',
+					'terms', 'customer_address', 'shipping_address_name', 'contact_person',
+					'territory', 'sales_team'
+				]:
+					if hasattr(original_dn, field) and getattr(original_dn, field):
+						setattr(return_doc, field, getattr(original_dn, field))
 
-        # Create return documents for each delivery note
-        for dn_name, items_data in deliveries.items():
-            try:
-                # Get original delivery note
-                original_dn = frappe.get_doc("Delivery Note", dn_name)
-                if original_dn.docstatus != 1:
-                    frappe.throw(f"Delivery Note {dn_name} is not submitted")
-                
-                # Create return delivery note manually
-                return_doc = frappe.new_doc("Delivery Note")
-                
-                # Copy basic information from original
-                return_doc.customer = original_dn.customer
-                return_doc.company = original_dn.company
-                return_doc.posting_date = delivery_return.date or today()
-                return_doc.posting_time = nowtime()
-                
-                # Set return flags
-                return_doc.is_return = 1
-                return_doc.return_against = dn_name
-                
-                # Copy delivery-related fields to avoid validation errors
-                if hasattr(original_dn, 'vehicle_no') and original_dn.vehicle_no:
-                    return_doc.vehicle_no = original_dn.vehicle_no
-                if hasattr(original_dn, 'driver_name') and original_dn.driver_name:
-                    return_doc.driver_name = original_dn.driver_name
-                if hasattr(original_dn, 'driver') and original_dn.driver:
-                    return_doc.driver = original_dn.driver
-                if hasattr(original_dn, 'transporter') and original_dn.transporter:
-                    return_doc.transporter = original_dn.transporter
-                if hasattr(original_dn, 'transporter_name') and original_dn.transporter_name:
-                    return_doc.transporter_name = original_dn.transporter_name
-                if hasattr(original_dn, 'lr_no') and original_dn.lr_no:
-                    return_doc.lr_no = original_dn.lr_no
-                if hasattr(original_dn, 'lr_date') and original_dn.lr_date:
-                    return_doc.lr_date = original_dn.lr_date
-                
-                # Copy other essential fields
-                fields_to_copy = [
-                    'currency', 'conversion_rate', 'selling_price_list',
-                    'price_list_currency', 'plc_conversion_rate', 'ignore_pricing_rule',
-                    'set_warehouse', 'target_warehouse', 'tc_name', 'terms',
-                    'customer_address', 'shipping_address_name', 'contact_person',
-                    'territory', 'sales_team'
-                ]
-                
-                for field in fields_to_copy:
-                    if hasattr(original_dn, field) and getattr(original_dn, field):
-                        setattr(return_doc, field, getattr(original_dn, field))
-                
-                # Add items based on what's being returned
-                for item_code, item_data in items_data.items():
-                    # Find the original item in the delivery note
-                    original_item = None
-                    for item in original_dn.items:
-                        if item.item_code == item_code:
-                            original_item = item
-                            break
-                    
-                    if not original_item:
-                        frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
-                    
-                    # Add return item with negative quantity for returns
-                    return_doc.append("items", {
-                        "item_code": item_code,
-                        "item_name": original_item.item_name,
-                        "description": original_item.description,
-                        "qty": -abs(item_data['qty']),  # Negative quantity for returns
-                        "uom": original_item.uom,
-                        "rate": original_item.rate,
-                        "warehouse": original_item.warehouse,
-                        "expense_account": getattr(original_item, 'expense_account', None),
-                        "cost_center": getattr(original_item, 'cost_center', None),
-                        "against_delivery_note": dn_name,
-                        "dn_detail": original_item.name,
-                        "against_sales_order": getattr(original_item, 'against_sales_order', None),
-                        "so_detail": getattr(original_item, 'so_detail', None),
-                        "serial_and_batch_bundle": getattr(original_item, 'serial_and_batch_bundle', None)
-                    })
-                
-                # Add custom QR codes tracking
-                if hasattr(return_doc, 'custom_returned_qr_codes'):
-                    for item_code, item_data in items_data.items():
-                        for qr_code in item_data['qr_codes']:
-                            return_doc.append("custom_returned_qr_codes", {
-                                "qr_code": qr_code,
-                                "qr_return_reference": delivery_return.name
-                            })
-                
-                # Set ignore validation flags to bypass some checks during insert
-                return_doc.flags.ignore_validate_update_after_submit = True
-                return_doc.flags.ignore_permissions = True
-                
-                # Save the return document
-                return_doc.insert(ignore_permissions=True)
-                
-                # Submit if auto-submit is enabled
-                if delivery_return.get('auto_submit_returns'):
-                    return_doc.submit()
-                
-                created_notes.append(return_doc.name)
-                
-            except Exception as e:
-                error_msg = str(e)
-                frappe.log_error(f"Error creating return for {dn_name}: {error_msg}", "Delivery Return Creation Error")
-                # specific error handling
-                if "vehicle_no" in error_msg or "driver_name" in error_msg:
-                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: Missing required delivery fields (vehicle_no, driver_name). Please ensure the original delivery note has these fields filled.")
-                else:
-                    frappe.throw(f"Error creating return for Delivery Note {dn_name}: {error_msg}")
+				for item_code, item_data in items_data.items():
+					original_item = next((item for item in original_dn.items if item.item_code == item_code), None)
+					if not original_item:
+						frappe.throw(f"Item {item_code} not found in Delivery Note {dn_name}")
 
-        if created_notes:
-            frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
-        else:
-            frappe.msgprint("No Delivery Note Returns were created")
-            
-        return created_notes
-        
-    except Exception as e:
-        error_msg = str(e)
-        frappe.log_error(f"Error in create_delivery_note_returns: {error_msg}", "Delivery Return Function Error")
-        frappe.throw(f"Error creating delivery note returns: {error_msg}")
+					new_sbb = None
+					if getattr(original_item, 'serial_and_batch_bundle', None):
+						sbb = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
+						if sbb.transaction_type == "Outward":
+							new_sbb = create_inward_sbb(
+								item_code=item_code,
+								batch_no=sbb.batch_no,
+								serial_nos=sbb.serial_nos.split("\n") if sbb.serial_nos else []
+							)
+
+					return_doc.append("items", {
+						"item_code": item_code,
+						"item_name": original_item.item_name,
+						"description": original_item.description,
+						"qty": -abs(item_data['qty']),
+						"uom": original_item.uom,
+						"rate": original_item.rate,
+						"warehouse": original_item.warehouse,
+						"expense_account": getattr(original_item, 'expense_account', None),
+						"cost_center": getattr(original_item, 'cost_center', None),
+						"against_delivery_note": dn_name,
+						"dn_detail": original_item.name,
+						"against_sales_order": getattr(original_item, 'against_sales_order', None),
+						"so_detail": getattr(original_item, 'so_detail', None),
+						"serial_and_batch_bundle": new_sbb
+					})
+
+				if hasattr(return_doc, 'custom_returned_qr_codes'):
+					for item_code, item_data in items_data.items():
+						for qr_code in item_data['qr_codes']:
+							return_doc.append("custom_returned_qr_codes", {
+								"qr_code": qr_code,
+								"qr_return_reference": delivery_return.name
+							})
+
+				return_doc.flags.ignore_validate_update_after_submit = True
+				return_doc.flags.ignore_permissions = True
+				return_doc.insert(ignore_permissions=True)
+
+				if delivery_return.get('auto_submit_returns'):
+					return_doc.submit()
+
+				created_notes.append(return_doc.name)
+
+			except Exception as e:
+				frappe.log_error(str(e), "Delivery Return Creation Error")
+				frappe.throw(f"Error creating return for Delivery Note {dn_name}: {e}")
+
+		if created_notes:
+			frappe.msgprint(f"Created Delivery Note Returns:<br><b>{'<br>'.join(created_notes)}</b>")
+		else:
+			frappe.msgprint("No Delivery Note Returns were created")
+		return created_notes
+
+	except Exception as e:
+		frappe.log_error(str(e), "Delivery Return Function Error")
+		frappe.throw(f"Error creating delivery note returns: {e}")

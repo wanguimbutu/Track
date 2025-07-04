@@ -3,7 +3,7 @@
 
 frappe.ui.form.on('Delivery Return', {
     refresh(frm) {
-        // Only show the button if the document is submitted
+        
         if (!frm.is_new() && frm.doc.docstatus === 1) {
             frm.add_custom_button('Create Delivery Note Return', () => {
                 frappe.call({
