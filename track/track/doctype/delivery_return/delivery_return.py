@@ -151,7 +151,51 @@ def validate_returned_qr_codes(doc, method):
 	if invalid_qrs:
 		frappe.throw(f"The following QR codes are not marked as 'Dispatched':<br><b>{', '.join(invalid_qrs)}</b>")
 
-
+def create_inward_serial_batch_bundle(return_doc, original_item, item_code, qty):
+                        """Create inward serial and batch bundle for returns using same batches/serials from original"""
+                        if not original_item.serial_and_batch_bundle:
+                            return None
+                        
+                        try:
+                            # Get the original bundle
+                            original_bundle = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
+                            
+                            # Create new bundle for inward transaction
+                            new_bundle = frappe.new_doc("Serial and Batch Bundle")
+                            new_bundle.item_code = item_code
+                            new_bundle.warehouse = original_item.warehouse
+                            new_bundle.type_of_transaction = "Inward"  # Key change: Inward for returns
+                            new_bundle.company = return_doc.company
+                            new_bundle.voucher_type = "Delivery Note"
+                            new_bundle.voucher_no = return_doc.name
+                            new_bundle.posting_date = return_doc.posting_date
+                            new_bundle.posting_time = return_doc.posting_time
+                            
+                            # Copy entries from original bundle but make them inward
+                            total_returned = 0
+                            for entry in original_bundle.entries:
+                                if total_returned >= qty:
+                                    break
+                                    
+                                returned_qty = min(abs(entry.qty), qty - total_returned)
+                                
+                                new_bundle.append("entries", {
+                                    "serial_no": entry.serial_no,
+                                    "batch_no": entry.batch_no,
+                                    "qty": returned_qty,  # Positive qty for inward
+                                    "warehouse": entry.warehouse,
+                                    "incoming_rate": getattr(entry, 'incoming_rate', 0)
+                                })
+                                
+                                total_returned += returned_qty
+                            
+                            new_bundle.insert(ignore_permissions=True)
+                            return new_bundle.name
+        
+                        except Exception as e:
+                            frappe.log_error(f"Error creating inward serial batch bundle: {str(e)}", "Serial Batch Bundle Creation")
+                            return None
+                
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
     """
@@ -271,51 +315,7 @@ def create_delivery_note_returns(docname):
                         "so_detail": getattr(original_item, 'so_detail', None),
                         "serial_and_batch_bundle": serial_batch_bundle
                     })
-                    def create_inward_serial_batch_bundle(return_doc, original_item, item_code, qty):
-                        """Create inward serial and batch bundle for returns using same batches/serials from original"""
-                        if not original_item.serial_and_batch_bundle:
-                            return None
-                        
-                        try:
-                            # Get the original bundle
-                            original_bundle = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
-                            
-                            # Create new bundle for inward transaction
-                            new_bundle = frappe.new_doc("Serial and Batch Bundle")
-                            new_bundle.item_code = item_code
-                            new_bundle.warehouse = original_item.warehouse
-                            new_bundle.type_of_transaction = "Inward"  # Key change: Inward for returns
-                            new_bundle.company = return_doc.company
-                            new_bundle.voucher_type = "Delivery Note"
-                            new_bundle.voucher_no = return_doc.name
-                            new_bundle.posting_date = return_doc.posting_date
-                            new_bundle.posting_time = return_doc.posting_time
-                            
-                            # Copy entries from original bundle but make them inward
-                            total_returned = 0
-                            for entry in original_bundle.entries:
-                                if total_returned >= qty:
-                                    break
-                                    
-                                returned_qty = min(abs(entry.qty), qty - total_returned)
-                                
-                                new_bundle.append("entries", {
-                                    "serial_no": entry.serial_no,
-                                    "batch_no": entry.batch_no,
-                                    "qty": returned_qty,  # Positive qty for inward
-                                    "warehouse": entry.warehouse,
-                                    "incoming_rate": getattr(entry, 'incoming_rate', 0)
-                                })
-                                
-                                total_returned += returned_qty
-                            
-                            new_bundle.insert(ignore_permissions=True)
-                            return new_bundle.name
-        
-                        except Exception as e:
-                            frappe.log_error(f"Error creating inward serial batch bundle: {str(e)}", "Serial Batch Bundle Creation")
-                            return None
-                
+                    
                 # Add custom QR codes tracking
                 if hasattr(return_doc, 'custom_returned_qr_codes'):
                     for item_code, item_data in items_data.items():
