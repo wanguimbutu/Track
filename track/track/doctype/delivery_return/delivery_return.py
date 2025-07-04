@@ -159,7 +159,7 @@ def create_inward_sbb(item_code, batch_no=None, serial_nos=None):
 		"item_code": item_code,
 		"batch_no": batch_no,
 		"serial_nos": "\n".join(serial_nos or []),
-		"transaction_type": "Inward"
+		"type_of_transaction": "Inward"
 	})
 	doc.insert(ignore_permissions=True)
 	return doc.name
