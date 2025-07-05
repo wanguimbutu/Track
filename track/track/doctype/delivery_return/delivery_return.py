@@ -163,11 +163,11 @@ def create_replacement_qrs(doc_name, replacement_data):
 					"qr_code": data['replacement_qr'],
 					"item_code": data['item_code'],
 					"status": "Returned",
-					"return_reference": doc_name,
-					"return_date": doc.date,
-					"dispatch_reference": data['dispatch_sheet'],
-					"dispatch_date": data['dispatch_date'],
-					"comments": f"Replacement QR for destroyed {data['original_qr']} via {doc_name}"
+					#"return_reference": doc_name,
+					#"return_date": doc.date,
+					#"dispatch_reference": data['dispatch_sheet'],
+					#"dispatch_date": data['dispatch_date'],
+					#"comments": f"Replacement QR for destroyed {data['original_qr']} via {doc_name}"
 				})
 				
 				# Set flags to bypass validation issues
