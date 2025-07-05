@@ -275,7 +275,7 @@ def create_delivery_note_returns(docname):
 	try:
 		delivery_return = frappe.get_doc("Delivery Return", docname)
 		
-		# Check if we have any items to process
+		# Check if we have any items to process (either returned_items OR invalid_items)
 		has_returned_items = delivery_return.returned_items and len(delivery_return.returned_items) > 0
 		has_invalid_items = hasattr(delivery_return, 'invalid_items') and delivery_return.invalid_items and len(delivery_return.invalid_items) > 0
 		
@@ -287,7 +287,7 @@ def create_delivery_note_returns(docname):
 		# Group items by delivery note and item_code
 		deliveries = {}
 		
-		# --- Process returned_items ---
+		# --- Process returned_items (if they exist) ---
 		if has_returned_items:
 			for row in delivery_return.returned_items:
 				if not row.delivery_note:
@@ -309,7 +309,7 @@ def create_delivery_note_returns(docname):
 				deliveries[delivery_note][item_code]['qty'] += 1  # Each QR = 1 qty
 				deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
 
-		# --- Process invalid_items ---
+		# --- Process invalid_items (if they exist) ---
 		if has_invalid_items:
 			for row in delivery_return.invalid_items:
 				if not row.delivery_note:
