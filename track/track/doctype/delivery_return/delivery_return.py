@@ -67,6 +67,10 @@ def on_submit_delivery_return(doc, method):
 				frappe.msgprint(f"❌ No dispatched QR found for Dispatch Sheet: {dispatch_sheet}. Skipping.")
 				continue
 
+			# Populate item_code for the invalid item record
+			invalid.item_code = dispatched_log.item_code
+			frappe.msgprint(f"✅ Set item_code {dispatched_log.item_code} for invalid item {i+1}")
+
 			# Step 1: Mark old QR as Destroyed
 			try:
 				frappe.db.set_value("Scan Log", dispatched_log.name, {
@@ -103,51 +107,37 @@ def on_submit_delivery_return(doc, method):
 				replacement_qr = replacement_qr_code.strip()
 				
 				# Check if replacement QR already exists
-				if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
+				existing_qr = frappe.db.get_value("Scan Log", {"qr_code": replacement_qr}, "name")
+				if existing_qr:
 					frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} already exists.")
 					continue
-
-				# Commit the transaction to ensure the Delivery Return document is saved
-				frappe.db.commit()
 
 				try:
 					frappe.msgprint(f"🔄 Creating replacement QR: {replacement_qr}")
 					
-					# Create replacement QR code with same details as destroyed QR
-					replacement_doc = frappe.get_doc({
-						"doctype": "Scan Log",
-						"qr_code": replacement_qr,
-						"item_code": dispatched_log.item_code,
-						"status": "Returned",
-						"return_reference": doc.name,
-						"return_date": doc.date,
-						"dispatch_reference": dispatch_sheet,
-						"dispatch_date": dispatched_log.dispatch_date,
-						"comments": f"Replacement QR for destroyed {dispatched_log.qr_code} via {doc.name}"
-					})
-					
-					# Set flags to bypass validation issues
-					replacement_doc.flags.ignore_permissions = True
-					replacement_doc.flags.ignore_validate = True
-					replacement_doc.flags.ignore_mandatory = True
-					
-					# Insert the document
-					replacement_doc.insert(ignore_permissions=True)
-					
-					# Verify it was created
-					if frappe.db.exists("Scan Log", {"qr_code": replacement_qr}):
-						frappe.msgprint(f"✅ Replacement QR Code {replacement_qr} created and marked as Returned.")
-					else:
-						frappe.msgprint(f"❌ Replacement QR Code {replacement_qr} was not created successfully.")
+					# Create using frappe.get_doc but with db_insert method
+					new_scan_log = frappe.new_doc("Scan Log")
+					new_scan_log.qr_code = replacement_qr
+					new_scan_log.item_code = dispatched_log.item_code
+					new_scan_log.status = "Returned"
+					new_scan_log.return_reference = doc.name
+					new_scan_log.return_date = doc.date
+					new_scan_log.dispatch_reference = dispatch_sheet
+					new_scan_log.dispatch_date = dispatched_log.dispatch_date
+					new_scan_log.comments = f"Replacement QR for destroyed {dispatched_log.qr_code} via {doc.name}"
+
+					# Use db_insert to bypass validations
+					new_scan_log.db_insert()
+					frappe.msgprint(f"✅ Replacement QR Code {replacement_qr} created and marked as Returned.")
 					
 				except Exception as e:
 					error_msg = str(e)
 					frappe.log_error(f"Error creating replacement QR Code {replacement_qr}: {error_msg}", "Replacement QR Creation Error")
 					frappe.msgprint(f"❌ Error creating replacement QR Code {replacement_qr}: {error_msg}")
 					
-					# Additional debugging info
-					frappe.msgprint(f"🔍 Debug info - Item Code: {dispatched_log.item_code}, Dispatch Sheet: {dispatch_sheet}")
-					
+					# Debug information
+					frappe.msgprint(f"🔍 Debug - Item: {dispatched_log.item_code}, Dispatch: {dispatch_sheet}")
+
 			else:
 				frappe.msgprint(f"ℹ️ No replacement QR Code provided for invalid item {i+1}. Only original was destroyed.")
 
