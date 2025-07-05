@@ -77,22 +77,18 @@ def update_stock_take_details(docname):
 
     for row in doc.get("stock_take_details", []):
         if row.qr_code:
-            messages.append(f"Checking QR Code: {row.qr_code}")
             scan_log = frappe.get_value("Scan Log", {"qr_code": row.qr_code}, ["item_code", "status"], as_dict=True)
             if scan_log:
                 row.set("item_code", scan_log.item_code)
                 row.set("status", scan_log.status)
                 updated = True
-                messages.append(f"Found: {scan_log.item_code}, {scan_log.status}")
-            else:
-                messages.append(f" Not Found: {row.qr_code}")
         else:
             messages.append("Empty QR Code found in one row")
 
     if updated:
         doc.save(ignore_permissions=True)
         frappe.db.commit()
-        messages.append(" Stock Take updated and saved.")
+        messages.append("Stock Take updated and saved.")
     else:
         messages.append("No updates made.")
 
