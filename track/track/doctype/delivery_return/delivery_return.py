@@ -276,11 +276,11 @@ def create_delivery_note_returns(docname):
 		delivery_return = frappe.get_doc("Delivery Return", docname)
 		
 		# Check if we have any items to process (either returned_items OR invalid_items)
-		has_returned_items = delivery_return.returned_items and len(delivery_return.returned_items) > 0
+		has_returned_items = hasattr(delivery_return, 'returned_items') and delivery_return.returned_items and len(delivery_return.returned_items) > 0
 		has_invalid_items = hasattr(delivery_return, 'invalid_items') and delivery_return.invalid_items and len(delivery_return.invalid_items) > 0
 		
 		if not has_returned_items and not has_invalid_items:
-			frappe.throw("No returned items or invalid items found in Delivery Return")
+			frappe.throw("No returned items or invalid items found in Delivery Return. Please add items to either 'Returned Items' or 'Invalid Items' table.")
 			
 		created_notes = []
 
