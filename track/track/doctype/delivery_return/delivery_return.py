@@ -17,26 +17,27 @@ def on_submit_delivery_return(doc, method):
 	"""
 
 	# --- 1. Process normal returned_items
-	for row in doc.returned_items:
-		if not row.qr_code:
-			continue
+	if hasattr(doc, 'returned_items') and doc.returned_items:
+		for row in doc.returned_items:
+			if not row.qr_code:
+				continue
 
-		qr_code = row.qr_code.strip()
-		scan_log_name = frappe.db.get_value("Scan Log", {"qr_code": qr_code})
+			qr_code = row.qr_code.strip()
+			scan_log_name = frappe.db.get_value("Scan Log", {"qr_code": qr_code})
 
-		if not scan_log_name:
-			frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
-			continue
+			if not scan_log_name:
+				frappe.msgprint(f"Scan Log not found for QR Code: {qr_code}")
+				continue
 
-		# Mark as returned
-		frappe.db.set_value("Scan Log", scan_log_name, {
-			"status": "Returned",
-			"return_reference": doc.name,
-			"return_date": doc.date
-		})
+			# Mark as returned
+			frappe.db.set_value("Scan Log", scan_log_name, {
+				"status": "Returned",
+				"return_reference": doc.name,
+				"return_date": doc.date
+			})
 
 	# --- 2. Process invalid_items (damaged/unreadable)
-	if hasattr(doc, 'invalid_items'):
+	if hasattr(doc, 'invalid_items') and doc.invalid_items:
 		frappe.msgprint(f"🟡 Found {len(doc.invalid_items)} invalid item(s)")
 
 		for i, invalid in enumerate(doc.invalid_items):
@@ -201,6 +202,9 @@ def validate_returned_qr_codes(doc, method):
 	  - Must exist in Scan Log with status 'Dispatched'
 	  - Auto-populate item_code, item_name, dispatch_reference
 	"""
+	if not hasattr(doc, 'returned_items') or not doc.returned_items:
+		return  # No returned items to validate
+		
 	invalid_qrs = []
 
 	for row in doc.returned_items:
@@ -222,50 +226,50 @@ def validate_returned_qr_codes(doc, method):
 		frappe.throw(f"The following QR codes are not marked as 'Dispatched':<br><b>{', '.join(invalid_qrs)}</b>")
 
 def create_inward_serial_batch_bundle(return_doc, original_item, item_code, qty):
-                        """Create inward serial and batch bundle for returns using same batches/serials from original"""
-                        if not original_item.serial_and_batch_bundle:
-                            return None
-                        
-                        try:
-                            # Get the original bundle
-                            original_bundle = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
-                            
-                            # Create new bundle for inward transaction
-                            new_bundle = frappe.new_doc("Serial and Batch Bundle")
-                            new_bundle.item_code = item_code
-                            new_bundle.warehouse = original_item.warehouse
-                            new_bundle.type_of_transaction = "Inward"  # Key change: Inward for returns
-                            new_bundle.company = return_doc.company
-                            new_bundle.voucher_type = "Delivery Note"
-                            new_bundle.voucher_no = return_doc.name
-                            new_bundle.posting_date = return_doc.posting_date
-                            new_bundle.posting_time = return_doc.posting_time
-                            
-                            # Copy entries from original bundle but make them inward
-                            total_returned = 0
-                            for entry in original_bundle.entries:
-                                if total_returned >= qty:
-                                    break
-                                    
-                                returned_qty = min(abs(entry.qty), qty - total_returned)
-                                
-                                new_bundle.append("entries", {
-                                    "serial_no": entry.serial_no,
-                                    "batch_no": entry.batch_no,
-                                    "qty": returned_qty,  # Positive qty for inward
-                                    "warehouse": entry.warehouse,
-                                    "incoming_rate": getattr(entry, 'incoming_rate', 0)
-                                })
-                                
-                                total_returned += returned_qty
-                            
-                            new_bundle.insert(ignore_permissions=True)
-                            return new_bundle.name
-        
-                        except Exception as e:
-                            frappe.log_error(f"Error creating inward serial batch bundle: {str(e)}", "Serial Batch Bundle Creation")
-                            return None
-                
+	"""Create inward serial and batch bundle for returns using same batches/serials from original"""
+	if not original_item.serial_and_batch_bundle:
+		return None
+	
+	try:
+		# Get the original bundle
+		original_bundle = frappe.get_doc("Serial and Batch Bundle", original_item.serial_and_batch_bundle)
+		
+		# Create new bundle for inward transaction
+		new_bundle = frappe.new_doc("Serial and Batch Bundle")
+		new_bundle.item_code = item_code
+		new_bundle.warehouse = original_item.warehouse
+		new_bundle.type_of_transaction = "Inward"  # Key change: Inward for returns
+		new_bundle.company = return_doc.company
+		new_bundle.voucher_type = "Delivery Note"
+		new_bundle.voucher_no = return_doc.name
+		new_bundle.posting_date = return_doc.posting_date
+		new_bundle.posting_time = return_doc.posting_time
+		
+		# Copy entries from original bundle but make them inward
+		total_returned = 0
+		for entry in original_bundle.entries:
+			if total_returned >= qty:
+				break
+				
+			returned_qty = min(abs(entry.qty), qty - total_returned)
+			
+			new_bundle.append("entries", {
+				"serial_no": entry.serial_no,
+				"batch_no": entry.batch_no,
+				"qty": returned_qty,  # Positive qty for inward
+				"warehouse": entry.warehouse,
+				"incoming_rate": getattr(entry, 'incoming_rate', 0)
+			})
+			
+			total_returned += returned_qty
+		
+		new_bundle.insert(ignore_permissions=True)
+		return new_bundle.name
+
+	except Exception as e:
+		frappe.log_error(f"Error creating inward serial batch bundle: {str(e)}", "Serial Batch Bundle Creation")
+		return None
+
 @frappe.whitelist()
 def create_delivery_note_returns(docname):
 	"""
@@ -275,12 +279,59 @@ def create_delivery_note_returns(docname):
 	try:
 		delivery_return = frappe.get_doc("Delivery Return", docname)
 		
+		# Debug: Print the document structure
+		frappe.msgprint(f"🔍 Debug: Document fields: {list(delivery_return.as_dict().keys())}")
+		
 		# Check if we have any items to process (either returned_items OR invalid_items)
-		has_returned_items = hasattr(delivery_return, 'returned_items') and delivery_return.returned_items and len(delivery_return.returned_items) > 0
-		has_invalid_items = hasattr(delivery_return, 'invalid_items') and delivery_return.invalid_items and len(delivery_return.invalid_items) > 0
+		has_returned_items = False
+		has_invalid_items = False
+		returned_items = []
+		invalid_items = []
+		
+		# Check for returned_items
+		if hasattr(delivery_return, 'returned_items'):
+			returned_items = getattr(delivery_return, 'returned_items', [])
+			if returned_items and len(returned_items) > 0:
+				has_returned_items = True
+				frappe.msgprint(f"✅ Found {len(returned_items)} returned items")
+		
+		# Check for invalid_items
+		if hasattr(delivery_return, 'invalid_items'):
+			invalid_items = getattr(delivery_return, 'invalid_items', [])
+			if invalid_items and len(invalid_items) > 0:
+				has_invalid_items = True
+				frappe.msgprint(f"✅ Found {len(invalid_items)} invalid items")
+		
+		# Also check for alternative field names that might be used
+		alternative_fields = ['invalid_item', 'damaged_items', 'unreadable_items', 'replacement_items']
+		for field in alternative_fields:
+			if hasattr(delivery_return, field):
+				items = getattr(delivery_return, field, [])
+				if items and len(items) > 0:
+					has_invalid_items = True
+					invalid_items = items  # Use this as invalid_items
+					frappe.msgprint(f"✅ Found {len(items)} items in {field} (using as invalid_items)")
+					break
+		
+		# List all available child tables for debugging
+		child_tables = []
+		for fieldname, field in delivery_return.meta.get_field_map().items():
+			if field.fieldtype == "Table":
+				table_data = getattr(delivery_return, fieldname, [])
+				if table_data:
+					child_tables.append(f"{fieldname} ({len(table_data)} rows)")
+		
+		frappe.msgprint(f"🔍 Debug: Available child tables: {', '.join(child_tables) if child_tables else 'None'}")
 		
 		if not has_returned_items and not has_invalid_items:
-			frappe.throw("No returned items or invalid items found in Delivery Return. Please add items to either 'Returned Items' or 'Invalid Items' table.")
+			error_msg = "No returned items or invalid items found in Delivery Return."
+			if child_tables:
+				error_msg += f"\n\nAvailable child tables with data: {', '.join(child_tables)}"
+				error_msg += f"\n\nPlease ensure your tables are named 'returned_items' or 'invalid_items' or add the correct field name to the alternative_fields list."
+			else:
+				error_msg += "\n\nNo child tables with data found in the document."
+			
+			frappe.throw(error_msg)
 			
 		created_notes = []
 
@@ -289,16 +340,20 @@ def create_delivery_note_returns(docname):
 		
 		# --- Process returned_items (if they exist) ---
 		if has_returned_items:
-			for row in delivery_return.returned_items:
-				if not row.delivery_note:
-					frappe.throw(f"Delivery Note missing for QR Code: {row.qr_code}")
+			frappe.msgprint(f"🔄 Processing {len(returned_items)} returned items...")
+			for row in returned_items:
+				if not hasattr(row, 'delivery_note') or not row.delivery_note:
+					frappe.throw(f"Delivery Note missing for QR Code: {getattr(row, 'qr_code', 'Unknown')}")
 					
 				delivery_note = row.delivery_note
 				if delivery_note not in deliveries:
 					deliveries[delivery_note] = {}
 				
 				# Group by item_code to aggregate quantities
-				item_code = row.item_code
+				item_code = getattr(row, 'item_code', None)
+				if not item_code:
+					frappe.throw(f"Item Code missing for QR Code: {getattr(row, 'qr_code', 'Unknown')}")
+				
 				if item_code not in deliveries[delivery_note]:
 					deliveries[delivery_note][item_code] = {
 						'qty': 0,
@@ -307,12 +362,14 @@ def create_delivery_note_returns(docname):
 					}
 				
 				deliveries[delivery_note][item_code]['qty'] += 1  # Each QR = 1 qty
-				deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
+				if hasattr(row, 'qr_code') and row.qr_code:
+					deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
 
 		# --- Process invalid_items (if they exist) ---
 		if has_invalid_items:
-			for row in delivery_return.invalid_items:
-				if not row.delivery_note:
+			frappe.msgprint(f"🔄 Processing {len(invalid_items)} invalid items...")
+			for row in invalid_items:
+				if not hasattr(row, 'delivery_note') or not row.delivery_note:
 					frappe.throw(f"Delivery Note missing for invalid item with item_code: {getattr(row, 'item_code', 'Unknown')}")
 					
 				delivery_note = row.delivery_note
@@ -320,7 +377,10 @@ def create_delivery_note_returns(docname):
 					deliveries[delivery_note] = {}
 				
 				# Group by item_code to aggregate quantities
-				item_code = row.item_code
+				item_code = getattr(row, 'item_code', None)
+				if not item_code:
+					frappe.throw(f"Item Code missing for invalid item: {getattr(row, 'qr_code', 'Unknown')}")
+				
 				if item_code not in deliveries[delivery_note]:
 					deliveries[delivery_note][item_code] = {
 						'qty': 0,
@@ -334,6 +394,9 @@ def create_delivery_note_returns(docname):
 					deliveries[delivery_note][item_code]['qr_codes'].append(row.qr_code)
 				else:
 					deliveries[delivery_note][item_code]['qr_codes'].append(f"Invalid-{item_code}")
+
+		if not deliveries:
+			frappe.throw("No valid delivery notes found to process returns for.")
 
 		# Create return documents for each delivery note
 		for dn_name, items_data in deliveries.items():
