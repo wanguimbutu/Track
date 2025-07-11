@@ -5,7 +5,9 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "finished_goods"
+  "finished_goods",
+  "section_break_loap",
+  "packet_items"
  ],
  "fields": [
   {
@@ -13,12 +15,22 @@
    "fieldtype": "Table",
    "label": "Finished Goods",
    "options": "Finished Goods"
+  },
+  {
+   "fieldname": "section_break_loap",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "packet_items",
+   "fieldtype": "Table",
+   "label": "Packet Items",
+   "options": "Packet Items"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-07-03 08:42:39.680084",
+ "modified": "2025-07-11 14:29:35.995480",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "QR Finished Goods",

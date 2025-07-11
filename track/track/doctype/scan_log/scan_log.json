@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "naming_series:",
  "creation": "2025-06-18 16:41:02.133150",
@@ -25,6 +26,8 @@
   "manufacture_date",
   "return_date",
   "dispatch_date",
+  "section_break_jlbk",
+  "packet_codes",
   "section_break_rfdm",
   "comments"
  ],
@@ -137,11 +140,21 @@
    "fieldname": "comments",
    "fieldtype": "Small Text",
    "label": "Comments"
+  },
+  {
+   "fieldname": "section_break_jlbk",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "packet_codes",
+   "fieldtype": "Table",
+   "label": "Packet Codes",
+   "options": "Packet Log"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 12:30:40.579216",
+ "modified": "2025-07-11 12:39:35.548601",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",
@@ -209,5 +222,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
