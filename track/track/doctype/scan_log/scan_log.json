@@ -12,7 +12,6 @@
   "status",
   "column_break_frop",
   "date",
-  "is_bag",
   "section_break_cmow",
   "item_code",
   "item_name",
@@ -151,17 +150,11 @@
    "fieldtype": "Table",
    "label": "Packet Codes",
    "options": "Packet Log"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_bag",
-   "fieldtype": "Check",
-   "label": "Is Bag"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-19 22:34:09.558888",
+ "modified": "2025-07-11 12:39:35.548601",
  "modified_by": "Administrator",
  "module": "Track",
  "name": "Scan Log",

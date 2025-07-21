@@ -1,77 +1,82 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-07-19 10:49:37.197293",
+ "autoname": "field:qr_code",
+ "creation": "2025-06-18 15:50:32.143780",
  "doctype": "DocType",
- "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "qr_code",
-  "item_code",
-  "manufacture_date",
-  "batch_no",
-  "dispatch_no",
-  "dispatch_date",
-  "return_date",
-  "status"
+  "column_break_vjlm",
+  "creation_date"
  ],
  "fields": [
   {
    "fieldname": "qr_code",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Qr Code"
+   "label": "Qr Code",
+   "reqd": 1,
+   "unique": 1
   },
   {
-   "fieldname": "item_code",
-   "fieldtype": "Link",
+   "fieldname": "column_break_vjlm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "creation_date",
+   "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Item Code",
-   "options": "Item"
-  },
-  {
-   "fieldname": "manufacture_date",
-   "fieldtype": "Date",
-   "label": "Manufacture Date"
-  },
-  {
-   "fieldname": "batch_no",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Batch No"
-  },
-  {
-   "fieldname": "dispatch_no",
-   "fieldtype": "Data",
-   "label": "Dispatch No"
-  },
-  {
-   "fieldname": "dispatch_date",
-   "fieldtype": "Date",
-   "label": "Dispatch Date"
-  },
-  {
-   "fieldname": "return_date",
-   "fieldtype": "Date",
-   "label": "Return Date"
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Status"
+   "label": "Creation Date",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
- "istable": 1,
  "links": [],
- "modified": "2025-07-19 10:53:26.700853",
+ "modified": "2025-06-30 11:45:26.160072",
  "modified_by": "Administrator",
  "module": "Track",
- "name": "QR_Codes",
+ "name": "Qr Codes",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "qr_code"
 }
