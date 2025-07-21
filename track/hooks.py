@@ -250,3 +250,17 @@ doc_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+fixtures = [
+    {
+        "doctype": "Server Script",
+        "filters": [
+            ["reference_doctype", "in", ["Stock Entry", "Loading Sheet", "Dispatch Sheet"]]
+        ]
+    },
+    {
+        "doctype": "Client Script",
+        "filters": [
+            ["reference_doctype", "in", ["Stock Entry", "Loading Sheet"]]
+        ]
+    }
+]

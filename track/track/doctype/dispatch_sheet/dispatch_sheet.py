@@ -66,31 +66,51 @@ def fetch_qr_details_for_dispatch(docname):
 
 def on_submit(doc, method):
     """
-    On Submit hook for Dispatch Sheet — validates QR code count and updates Scan Log entries:
-    - status = 'Dispatched'
-    - dispatch_reference = Dispatch Sheet name
-    - date = Dispatch Sheet date
+    On Submit hook for Dispatch Sheet:
+    - Ensures that all scannable items in linked Loading Sheets have QR codes
+    - Validates QR code count matches loading qty (only for scannable items)
+    - Updates Scan Log entries to 'Dispatched'
     """
 
-    # 1. Validate QR count
-    total_loading_qty = 0
+    # 1. Collect items from loading sheets
+    total_scannable_qty = 0
+    scannable_items = {}
+    all_items = []
+
     if doc.loading_sheets:
-        for loading_sheet_link in doc.loading_sheets:
-            loading_doc = frappe.get_doc("Loading Sheet", loading_sheet_link.loading_sheet)
+        for link in doc.loading_sheets:
+            loading_doc = frappe.get_doc("Loading Sheet", link.loading_sheet)
             for row in loading_doc.loading_sheet_items:
-                total_loading_qty += row.qty
+                item_code = row.item_code
+                all_items.append(item_code)
 
-    qr_count = len([row for row in doc.dispatch_qr_codes if row.qr_code])
+                is_scannable = frappe.db.get_value("Item", item_code, "custom_is_scanned")
+                if is_scannable:
+                    total_scannable_qty += row.qty
+                    if item_code not in scannable_items:
+                        scannable_items[item_code] = 0
+                    scannable_items[item_code] += row.qty
 
-    if qr_count != total_loading_qty:
-        frappe.throw(f"""
-            QR Code count mismatch:
-            <br><b>Total QR Codes:</b> {qr_count}
-            <br><b>Total Quantity in Loading Sheets:</b> {total_loading_qty}
-            <br>Please ensure the number of QR codes matches the quantity across all loading sheets.
-        """)
+    # 2. Collect QR codes
+    qr_code_entries = [row for row in doc.dispatch_qr_codes if row.qr_code]
+    qr_item_counts = {}
+    for row in qr_code_entries:
+        if row.item_code:
+            qr_item_counts[row.item_code] = qr_item_counts.get(row.item_code, 0) + 1
 
-    # 2. Update Scan Log
+    # 3. Validate QR code presence for scannable items
+    missing = []
+    for item_code, expected_qty in scannable_items.items():
+        scanned_qty = qr_item_counts.get(item_code, 0)
+        if scanned_qty < expected_qty:
+            item_name = frappe.db.get_value("Item", item_code, "item_name")
+            missing.append(f"{item_name or item_code} (Expected: {expected_qty}, Found: {scanned_qty})")
+
+    if missing:
+        msg = "<b>The following scannable items are missing QR codes:</b><br>" + "<br>".join(missing)
+        frappe.throw(msg)
+
+    # 4. Update Scan Log
     for row in doc.dispatch_qr_codes:
         if row.qr_code:
             log_name = frappe.db.get_value("Scan Log", {"qr_code": row.qr_code})
