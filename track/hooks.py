@@ -252,15 +252,16 @@ doc_events = {
 
 fixtures = [
     {
-        "doctype": "Server Script",
+        "doctype": "Client Script",
         "filters": [
-            ["reference_doctype", "in", ["Stock Entry", "Loading Sheet", "Dispatch Sheet"]]
+            ["module", "=", "Track"]
         ]
     },
     {
-        "doctype": "Client Script",
+        "doctype": "Server Script",
         "filters": [
-            ["reference_doctype", "in", ["Stock Entry", "Loading Sheet"]]
+            ["module", "=", "Track"]
         ]
-    }
+    },
 ]
+

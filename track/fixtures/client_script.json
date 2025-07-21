@@ -1,0 +1,35 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Loading Sheet",
+  "enabled": 1,
+  "modified": "2025-06-26 10:52:29.866381",
+  "module": "Track",
+  "name": "Loading Sheet to Dispatch sheet",
+  "script": "frappe.listview_settings['Loading Sheet'] = {\n    onload: function(listview) {\n        listview.page.add_inner_button('Create Dispatch Sheet', () => {\n            const selected = listview.get_checked_items().map(row => row.name);\n            if (!selected.length) {\n                frappe.msgprint(\"Please select at least one Loading Sheet.\");\n                return;\n            }\n\n            frappe.call({\n                method: \"create_dispatch_sheet_from_loading_sheets\",\n                args: {\n                    loading_sheets: JSON.stringify(selected)\n                },\n                callback: function(r) {\n                    if (r.message) {\n                        frappe.set_route(\"Form\", \"Dispatch Sheet\", r.message);\n                    }\n                }\n            });\n        });\n    }\n};\n",
+  "view": "List"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Stock Entry",
+  "enabled": 1,
+  "modified": "2025-07-19 10:45:10.746621",
+  "module": "Track",
+  "name": "stock entry code to batch",
+  "script": "frappe.ui.form.on('Stock Entry', {\n  on_submit: function(frm) {\n    if (frm.doc.purpose === 'Manufacture') {\n      frappe.call({\n        method: 'create_batch_for_qr_codes',\n        args: {\n          name: frm.doc.name,  \n          item_code: frm.doc.items[0].item_code,\n          qr_codes: frm.doc.table_cnlu.map(row => row.qr_code),\n          manufacture_date: frappe.datetime.get_today()\n        },\n        callback: function(r) {\n          if (r.message) {\n            frm.doc.items[0].batch_no = r.message;\n            frm.refresh_field('items');\n          }\n        }\n      });\n    }\n  }\n});\n",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Loading Sheet",
+  "enabled": 1,
+  "modified": "2025-07-19 10:46:13.792883",
+  "module": "Track",
+  "name": "Loading SHeet to dispatch",
+  "script": "frappe.listview_settings['Loading Sheet'] = {\n    onload: function(listview) {\n        listview.page.add_inner_button('Create Dispatch Sheet', () => {\n            const selected = listview.get_checked_items().map(row => row.name);\n            if (!selected.length) {\n                frappe.msgprint(\"Please select at least one Loading Sheet.\");\n                return;\n            }\n\n            frappe.call({\n                method: \"create_dispatch_sheet_from_loading_sheets\",\n                args: {\n                    loading_sheets: JSON.stringify(selected)\n                },\n                callback: function(r) {\n                    if (r.message) {\n                        frappe.set_route(\"Form\", \"Dispatch Sheet\", r.message);\n                    }\n                }\n            });\n        });\n    }\n};\n",
+  "view": "List"
+ }
+]
