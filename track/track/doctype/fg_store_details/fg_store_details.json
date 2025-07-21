@@ -1,18 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-07-19 10:49:37.197293",
+ "creation": "2025-07-19 11:07:07.865493",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "qr_code",
   "item_code",
-  "manufacture_date",
-  "batch_no",
-  "dispatch_no",
-  "dispatch_date",
-  "return_date",
+  "item_name",
   "status"
  ],
  "fields": [
@@ -30,30 +26,10 @@
    "options": "Item"
   },
   {
-   "fieldname": "manufacture_date",
-   "fieldtype": "Date",
-   "label": "Manufacture Date"
-  },
-  {
-   "fieldname": "batch_no",
-   "fieldtype": "Data",
+   "fieldname": "item_name",
+   "fieldtype": "Read Only",
    "in_list_view": 1,
-   "label": "Batch No"
-  },
-  {
-   "fieldname": "dispatch_no",
-   "fieldtype": "Data",
-   "label": "Dispatch No"
-  },
-  {
-   "fieldname": "dispatch_date",
-   "fieldtype": "Date",
-   "label": "Dispatch Date"
-  },
-  {
-   "fieldname": "return_date",
-   "fieldtype": "Date",
-   "label": "Return Date"
+   "label": "Item Name"
   },
   {
    "fieldname": "status",
@@ -65,10 +41,10 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-07-19 10:53:26.700853",
+ "modified": "2025-07-19 11:08:51.110586",
  "modified_by": "Administrator",
  "module": "Track",
- "name": "QR_Codes",
+ "name": "FG Store Details",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "modified",
