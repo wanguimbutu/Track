@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class QR_Codes(Document):
+class FGStoreDetails(Document):
 	pass
